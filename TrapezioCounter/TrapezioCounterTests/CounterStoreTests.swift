@@ -16,8 +16,16 @@ final class CounterStoreTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
-        // Initialize fresh state for every test
-        store = CounterStore(screen: CounterScreen(initialValue: 10))
+        
+        // 2. Manual Injection: We provide the fake directly.
+        // This is where we "simulate" a DI override.
+        let screen = CounterScreen(initialValue: 10)
+        let fakeUsecase = FakeDivideUsecase()
+        
+        store = CounterStore(
+            screen: screen,
+            divideUsecase: fakeUsecase
+        )
     }
 
     func test_increment_increasesCount() {
@@ -36,10 +44,11 @@ final class CounterStoreTests: XCTestCase {
         XCTAssertEqual(store.state.count, initialCount)
     }
 
-    func test_divideByTwo_eventuallyUpdatesState() async {
+    func test_divideByTwo_isInstantAndDeterministic() async {
         store.handle(event: .divideByTwo)
-        // do better than sleep in tests, but for simplicity we will here
-        try? await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertEqual(store.state.count, 5)
+        // No more long sleep!
+        // Use yield to let the Store's Task { } block start and finish.
+        await Task.yield()
+        XCTAssertEqual(store.state.count, 5, "The count should be divided by 2 instantly using the fake.")
     }
 }

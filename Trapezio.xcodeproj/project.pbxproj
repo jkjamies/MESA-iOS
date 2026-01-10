@@ -39,6 +39,7 @@
 			membershipExceptions = (
 				TrapezioCounterTests/CounterStoreTests.swift,
 				TrapezioCounterTests/DivideUseCaseTests.swift,
+				TrapezioCounterTests/Fakes/FakeDivideUseCase.swift,
 			);
 			target = 2D4544072F12F2C4007AE19F /* TrapezioCounter */;
 		};
@@ -47,6 +48,7 @@
 			membershipExceptions = (
 				TrapezioCounterTests/CounterStoreTests.swift,
 				TrapezioCounterTests/DivideUseCaseTests.swift,
+				TrapezioCounterTests/Fakes/FakeDivideUseCase.swift,
 			);
 			target = 2D4544142F12F2C5007AE19F /* TrapezioCounterTests */;
 		};

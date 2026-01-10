@@ -9,11 +9,12 @@ import Foundation
 import Trapezio
 
 final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
-    private let divideUsecase = DivideUsecase()
+    private let divideUsecase: any DivideUsecaseProtocol
     
-    init(screen: CounterScreen) {
-        super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
-    }
+    init(screen: CounterScreen, divideUsecase: any DivideUsecaseProtocol) {
+            self.divideUsecase = divideUsecase
+            super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
+        }
     
     override func handle(event: CounterEvent) {
         switch event {

@@ -7,10 +7,14 @@
 
 import Foundation
 
-public struct DivideUsecase: Sendable {
+public protocol DivideUsecaseProtocol: Sendable {
+    func execute(value: Int) async -> Int
+}
+
+public struct DivideUsecase: DivideUsecaseProtocol {
     nonisolated public init() {}
     
-    func execute(value: Int) async -> Int {
+    public func execute(value: Int) async -> Int {
         try? await Task.sleep(nanoseconds: 100_000_000)
         return value / 2
     }
