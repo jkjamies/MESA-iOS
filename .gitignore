@@ -1,0 +1,21 @@
+# --- Xcode / Build Artifacts ---
+DerivedData/
+build/
+xcuserdata/
+*.xcuserstate
+*.hmap
+*.ipa
+
+# --- Swift Package Manager ---
+.build/
+/Packages
+Package.resolved
+.swiftpm/configuration/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+
+# --- System & Security ---
+.DS_Store
+.netrc
+.env
+*.swp
+*.lock
