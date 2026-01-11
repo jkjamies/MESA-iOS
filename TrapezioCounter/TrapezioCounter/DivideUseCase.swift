@@ -14,7 +14,7 @@ public protocol DivideUsecaseProtocol: Sendable {
 public struct DivideUsecase: DivideUsecaseProtocol {
     nonisolated public init() {}
     
-    public func execute(value: Int) async -> Int {
+    nonisolated public func execute(value: Int) async -> Int {
         try? await Task.sleep(nanoseconds: 100_000_000)
         return value / 2
     }
