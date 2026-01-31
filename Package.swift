@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "Trapezio",
     platforms: [
-        .iOS(.v17),     // Your primary target
+        .iOS(.v16),     // Your primary target
         .macOS(.v14)    // The "Helper" target for fast local testing/indexing
     ],
     products: [
