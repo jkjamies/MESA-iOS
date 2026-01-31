@@ -2,6 +2,11 @@
 
 A type-safe, Circuit-inspired architecture for SwiftUI. This framework enforces a strict separation between logic (Store), presentation (UI), and identity (Screen).
 
+## Libraries
+
+- **Trapezio**: The core types (`Store`, `State`, `Screen`, `Event`, `UI`).
+- **TrapezioNavigation**: The navigation layer (`TrapezioNavigator`, `TrapezioNavigationHost`, `TrapezioInterop`).
+
 ## Core Architecture
 
 ### 1. The Screen (Identity)
@@ -14,36 +19,46 @@ The `TrapezioStore` is the brain of the feature. It is isolated to the `@MainAct
 The `TrapezioUI` is a pure mapping function. It takes a `State` and returns a `View`. It communicates user interactions back to the Store via a closure.
 
 ### 4. The Runtime (The Weld)
-The `TrapezioRuntime` is the engine that connects the Store to the UI. It ensures that the generic types for State and Event match across all components at compile-time.
-
-### 5. SwiftUI lifecycle ownership (Recommended)
-When rendering a feature in SwiftUI, use `TrapezioContainer` so the Store is owned as a `@StateObject`.
-This avoids Store re-creation during view updates and navigation.
+The `TrapezioRuntime` uses `TrapezioContainer` to own the Store as a `@StateObject`, preventing re-initialization during view updates.
 
 ## Example: Counter Feature
 
 ```swift
+import Trapezio
+import TrapezioNavigation
+import SwiftUI
+
 // 1. Definition (Screen, State, Event)
 struct CounterScreen: TrapezioScreen { let initialValue: Int }
 struct CounterState: TrapezioState { var count: Int }
 enum CounterEvent: TrapezioEvent { case increment }
 
 // 2. Store Implementation
+@MainActor
 final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
+    private let navigator: (any TrapezioNavigator)?
+
+    init(screen: CounterScreen, navigator: (any TrapezioNavigator)?) {
+        self.navigator = navigator
+        super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
+    }
+
     override func handle(event: CounterEvent) {
-        if event == .increment { update { $0.count += 1 } }
+        if event == .increment { 
+            update { $0.count += 1 } 
+        }
     }
 }
 
 // 3. UI Implementation
 struct CounterUI: TrapezioUI {
-    func map(state: CounterState, onEvent: @escaping (CounterEvent) -> Void) -> some View {
+    func map(state: CounterState, onEvent: @escaping @MainActor (CounterEvent) -> Void) -> some View {
         Button("\(state.count)") { onEvent(.increment) }
     }
 }
 ```
 
-## SwiftUI Navigation Host (Recommended)
+## Navigation Host
 
 Use `TrapezioNavigationHost` to drive navigation with a native `NavigationStack`.
 
@@ -54,13 +69,14 @@ Use `TrapezioNavigationHost` to drive navigation with a native `NavigationStack`
 ```swift
 import SwiftUI
 import Trapezio
+import TrapezioNavigation
 
 struct AppRoot: View {
     var body: some View {
-        TrapezioNavigationHost(root: CounterScreen(initialValue: 0)) { screen, navigator in
+        TrapezioNavigationHost(root: CounterScreen(initialValue: 0)) { screen, navigator, interop in
             switch screen {
             case let counter as CounterScreen:
-                CounterFactory.make(screen: counter, navigator: navigator)
+                CounterFactory.make(screen: counter, navigator: navigator, interop: interop)
             case let summary as SummaryScreen:
                 SummaryFactory.make(screen: summary, navigator: navigator)
             default:
@@ -71,89 +87,35 @@ struct AppRoot: View {
 }
 ```
 
-## Using Trapezio without `TrapezioNavigationHost`
+## Interop (Advanced)
 
-You can render a feature directly in SwiftUI without using the navigation host.
+For legacy apps, tab switching, or system alerts, use the `TrapezioInterop` protocol.
 
-This is useful when:
-- the feature is a leaf screen and navigation is handled elsewhere,
-- you’re embedding a feature in an existing container,
-- you don’t want Trapezio to own the navigation stack.
+1. **Define Events**:
+   ```swift
+   enum AppInterop: TrapezioInteropEvent {
+       case showAlert(message: String)
+       case switchTab(index: Int)
+   }
+   ```
 
-### Prefer `TrapezioContainer` for Store lifetime
+2. **Send from Store**:
+   ```swift
+   // Inject 'interop: (any TrapezioInterop)?' into your Store
+   interop?.send(AppInterop.showAlert(message: "Hello"))
+   ```
 
-`TrapezioContainer` owns the Store as a `@StateObject`, preventing re-initialization during view updates.
-
-```swift
-import SwiftUI
-import Trapezio
-
-struct StandaloneCounter: View {
-    let screen: CounterScreen
-
-    var body: some View {
-        TrapezioContainer(makeStore: CounterStore(screen: screen, initialState: CounterState(count: screen.initialValue))) { store in
-            store.render(with: CounterUI())
-        }
-    }
-}
-```
-
-> Note: If your Store has dependencies (use cases, repositories, etc.), create it in the `makeStore:` expression (or via a factory/DI layer) and pass them in there.
-
-## Custom interop navigation (optional)
-
-For legacy apps or mixed SwiftUI/UIKit navigation, Stores can emit custom navigation requests:
-
-- `goTo(custom: String)`
-- `dismissTo(custom: String)`
-
-These requests do **not** push onto the SwiftUI `NavigationStack`. They are forwarded to the host via `onCustomNavigation`, allowing completely app-defined behavior (UIKit coordinator, deep link router, tab switch, etc.).
-
-### Emitting interop from a Store
-
-```swift
-// Inside a TrapezioStore handle(event:)
-
-// Tell the app layer to do something totally custom
-navigator?.goTo(custom: "legacy/profile?id=123")
-
-// Or request a custom dismissal target
-navigator?.dismissTo(custom: "legacy/home")
-```
-
-### Handling interop in the host
-
-```swift
-import SwiftUI
-import Trapezio
-
-struct AppRoot: View {
-    var body: some View {
-        TrapezioNavigationHost(
-            root: CounterScreen(initialValue: 0),
-            onCustomNavigation: { request in
-                switch request {
-                case .goTo(let route):
-                    // Handle route however your app needs.
-                    print("Interop goTo(custom:): \(route)")
-                case .dismissTo(let route):
-                    print("Interop dismissTo(custom:): \(route)")
-                }
-            },
-            builder: { screen, navigator in
-                switch screen {
-                case let counter as CounterScreen:
-                    CounterFactory.make(screen: counter, navigator: navigator)
-                case let summary as SummaryScreen:
-                    SummaryFactory.make(screen: summary, navigator: navigator)
-                default:
-                    EmptyView()
-                }
-            }
-        )
-    }
-}
-```
-
-> Note: The included sample app (`TrapezioCounter`) is pure SwiftUI and does not currently use the interop hook.
+3. **Handle in Host**:
+   ```swift
+   TrapezioNavigationHost(
+       root: HomeScreen(),
+       onInterop: { event in
+           if let appEvent = event as? AppInterop {
+               switch appEvent {
+               case .showAlert(let msg): print(msg)
+               case .switchTab(let idx): tabSelection = idx
+               }
+           }
+       }
+   ) { ... }
+   ```
