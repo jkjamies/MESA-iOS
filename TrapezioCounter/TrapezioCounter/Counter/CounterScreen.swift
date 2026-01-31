@@ -25,4 +25,5 @@ enum CounterEvent: TrapezioEvent {
     case decrement
     case divideByTwo // example of usecase
     case goToSummary
+    case requestHelp
 }

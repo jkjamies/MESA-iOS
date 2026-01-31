@@ -9,7 +9,7 @@ import SwiftUI
 import Trapezio
 
 struct SummaryUI: TrapezioUI {
-    func map(state: SummaryState, onEvent: @escaping (SummaryEvent) -> Void) -> some View {
+    func map(state: SummaryState, onEvent: @escaping @MainActor (SummaryEvent) -> Void) -> some View {
         VStack(spacing: 30) {
             Text("Summary")
                 .font(.title.bold())

@@ -7,9 +7,10 @@
 
 import SwiftUI
 import Trapezio
+import TrapezioNavigation
 
 struct CounterUI: TrapezioUI {
-    func map(state: CounterState, onEvent: @escaping (CounterEvent) -> Void) -> some View {
+    func map(state: CounterState, onEvent: @escaping @MainActor (CounterEvent) -> Void) -> some View {
         VStack(spacing: 30) {
             Text("\(state.count)")
                 .font(.system(size: 60, weight: .bold, design: .monospaced))
@@ -24,6 +25,9 @@ struct CounterUI: TrapezioUI {
                 Button("+") { onEvent(.increment) }
                     .buttonStyle(.bordered)
             }
+
+            Button("Help") { onEvent(.requestHelp) }
+                .buttonStyle(.borderless)
             
             Divider().padding(.horizontal)
 

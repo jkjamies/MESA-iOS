@@ -7,19 +7,23 @@
 
 import Foundation
 import Trapezio
+import TrapezioNavigation
 
 @MainActor
 final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
     private let divideUsecase: any DivideUsecaseProtocol
-    private weak var navigator: (any TrapezioNavigator)?
+    private let navigator: (any TrapezioNavigator)?
+    private let interop: (any TrapezioInterop)?
     
     init(
         screen: CounterScreen,
         divideUsecase: any DivideUsecaseProtocol,
-        navigator: (any TrapezioNavigator)?
+        navigator: (any TrapezioNavigator)?,
+        interop: (any TrapezioInterop)?
     ) {
         self.divideUsecase = divideUsecase
         self.navigator = navigator
+        self.interop = interop
         super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
     }
     
@@ -36,6 +40,8 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
             }
         case .goToSummary:
             navigator?.goTo(SummaryScreen(value: state.count))
+        case .requestHelp:
+            interop?.send(AppInterop.showAlert(message: "This is a simple counter. Press +/- to change value."))
         }
     }
 }

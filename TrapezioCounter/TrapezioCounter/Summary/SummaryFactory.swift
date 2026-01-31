@@ -7,9 +7,10 @@
 
 import SwiftUI
 import Trapezio
+import TrapezioNavigation
 
 struct SummaryFactory {
-    @ViewBuilder
+    @ViewBuilder @MainActor
     static func make(screen: SummaryScreen, navigator: (any TrapezioNavigator)?) -> some View {
         TrapezioContainer(
             makeStore: SummaryStore(screen: screen, navigator: navigator),

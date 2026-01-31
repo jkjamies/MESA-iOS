@@ -7,10 +7,11 @@
 
 import Foundation
 import Trapezio
+import TrapezioNavigation
 
 @MainActor
 final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEvent> {
-    private weak var navigator: (any TrapezioNavigator)?
+    private let navigator: (any TrapezioNavigator)?
 
     init(screen: SummaryScreen, navigator: (any TrapezioNavigator)?) {
         self.navigator = navigator
