@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "Trapezio",
     platforms: [
-        .iOS(.v17),     // Your primary target
+        .iOS(.v16),     // Your primary target
         .macOS(.v14)    // The "Helper" target for fast local testing/indexing
     ],
     products: [
@@ -15,12 +15,20 @@ let package = Package(
             name: "Trapezio",
             targets: ["Trapezio"]
         ),
+        .library(
+            name: "TrapezioNavigation",
+            targets: ["TrapezioNavigation"]
+        ),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "Trapezio"
+        ),
+        .target(
+            name: "TrapezioNavigation",
+            dependencies: ["Trapezio"]
         ),
         .testTarget(
             name: "TrapezioTests",

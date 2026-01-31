@@ -14,5 +14,5 @@ public protocol TrapezioUI {
     associatedtype Content: View
     
     @ViewBuilder
-    func map(state: State, onEvent: @escaping (Event) -> Void) -> Content
+    func map(state: State, onEvent: @escaping @MainActor (Event) -> Void) -> Content
 }

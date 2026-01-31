@@ -7,12 +7,14 @@
 
 import XCTest
 import Trapezio
+import TrapezioNavigation
 @testable import TrapezioCounter
 
 @MainActor
 final class CounterStoreTests: XCTestCase {
     
     var store: CounterStore!
+    var interop: FakeInterop!
     
     override func setUp() {
         super.setUp()
@@ -21,10 +23,13 @@ final class CounterStoreTests: XCTestCase {
         // This is where we "simulate" a DI override.
         let screen = CounterScreen(initialValue: 10)
         let fakeUsecase = FakeDivideUsecase()
+        interop = FakeInterop()
         
         store = CounterStore(
             screen: screen,
-            divideUsecase: fakeUsecase
+            divideUsecase: fakeUsecase,
+            navigator: nil,
+            interop: interop
         )
     }
 
@@ -38,9 +43,9 @@ final class CounterStoreTests: XCTestCase {
         XCTAssertEqual(store.state.count, 9)
     }
 
-    func test_printValue_doesNotMutateState() {
+    func test_goToSummary_withNilNavigator_doesNotMutateState() {
         let initialCount = store.state.count
-        store.handle(event: .printValue)
+        store.handle(event: .goToSummary)
         XCTAssertEqual(store.state.count, initialCount)
     }
 
@@ -50,5 +55,21 @@ final class CounterStoreTests: XCTestCase {
         // Use yield to let the Store's Task { } block start and finish.
         await Task.yield()
         XCTAssertEqual(store.state.count, 5, "The count should be divided by 2 instantly using the fake.")
+    }
+    
+    func test_requestHelp_sendsInteropEvent() {
+        store.handle(event: .requestHelp)
+        
+        XCTAssertEqual(interop.sentEvents.count, 1)
+        guard let event = interop.sentEvents.first as? AppInterop else {
+            XCTFail("Event was not AppInterop")
+            return
+        }
+        
+        if case .showAlert(let message) = event {
+            XCTAssertEqual(message, "This is a simple counter. Press +/- to change value.")
+        } else {
+            XCTFail("Wrong event type")
+        }
     }
 }
