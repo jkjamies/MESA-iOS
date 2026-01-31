@@ -7,6 +7,7 @@
 
 import Foundation
 import Trapezio
+import TrapezioNavigation
 @testable import TrapezioCounter
 
 class FakeInterop: TrapezioInterop {
