@@ -25,6 +25,7 @@ The iOS implementation of the MESA framework using SwiftUI. Aligned with the And
 - **Concurrency:** 
     - Stores and UI are strictly `@MainActor`.
     - `TrapezioUI` map function requires `onEvent` to be `@MainActor`.
+- **License Headers:** All source files must include the Apache 2.0 license header. The year should be `2026` (if current year) or `2026-<currentYear>`.
 
 ## The Trapezio Contract
 1. **Screen:** `Hashable` route identifier.
