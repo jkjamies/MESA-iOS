@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import Trapezio
+import Foundation
 
-/// A secondary screen to demonstrate navigation interoperability.
-struct SummaryScreen: TrapezioScreen {
-    let value: Int
-}
-
-struct SummaryState: TrapezioState {
-    var value: Int
-    var lastSavedValue: Int? = nil
-}
-
-enum SummaryEvent: TrapezioEvent {
-    case printValue
-    case save
-    case back
+/// A transient in-memory implementation for older iOS versions or testing.
+public class InMemorySummaryRepository: SummaryRepository {
+    private var value: Int?
+    
+    public init() {}
+    
+    public func saveValue(_ value: Int) async throws {
+        self.value = value
+    }
+    
+    public func observeLastValue() -> AsyncStream<Int?> {
+        let current = value
+        return AsyncStream { continuation in
+            continuation.yield(current)
+            continuation.finish()
+        }
+    }
 }

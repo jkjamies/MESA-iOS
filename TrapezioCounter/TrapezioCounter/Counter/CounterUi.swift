@@ -35,8 +35,16 @@ struct CounterUI: TrapezioUI {
                     .buttonStyle(.bordered)
             }
 
-            Button("Help") { onEvent(.requestHelp) }
-                .buttonStyle(.borderless)
+
+
+            HStack {
+                Button("Help") { onEvent(.requestHelp) }
+                    .buttonStyle(.borderless)
+                
+                Button("Error") { onEvent(.throwError) }
+                    .buttonStyle(.borderless)
+                    .foregroundColor(.red)
+            }
             
             Divider().padding(.horizontal)
 
@@ -45,6 +53,25 @@ struct CounterUI: TrapezioUI {
             }
             .font(.headline)
         }
+
         .padding()
+        .overlay(alignment: .bottom) {
+            if let msg = state.message {
+                VStack {
+                    Text(msg.message)
+                        .padding()
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                    Button("Dismiss") {
+                        onEvent(.clearError(id: msg.id))
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(radius: 5)
+                .padding()
+            }
+        }
     }
 }

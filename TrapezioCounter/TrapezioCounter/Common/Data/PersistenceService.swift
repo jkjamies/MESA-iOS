@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-import Trapezio
+import SwiftData
+import Foundation
 
-/// A secondary screen to demonstrate navigation interoperability.
-struct SummaryScreen: TrapezioScreen {
-    let value: Int
-}
+@available(iOS 17, *)
+public class PersistenceService {
+    public static let shared = PersistenceService()
+    
+    public let container: ModelContainer
+    
+    private init() {
+        let schema = Schema([
+            TrapezioModel.self,
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
-struct SummaryState: TrapezioState {
-    var value: Int
-    var lastSavedValue: Int? = nil
-}
-
-enum SummaryEvent: TrapezioEvent {
-    case printValue
-    case save
-    case back
+        do {
+            container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }
 }

@@ -27,10 +27,30 @@ struct SummaryUI: TrapezioUI {
                 .font(.system(size: 60, weight: .bold, design: .monospaced))
 
             HStack(spacing: 16) {
+            }
+            
+            if let saved = state.lastSavedValue {
+                Text("Last Saved: \(saved)")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("No value saved yet")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Button("Save Current to DB") {
+                onEvent(.save)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top)
+
+            HStack(spacing: 16) {
                 Button("Back") {
                     onEvent(.back)
                 }
                 .buttonStyle(.bordered)
+
 
                 Button("Print Current Value") {
                     onEvent(.printValue)

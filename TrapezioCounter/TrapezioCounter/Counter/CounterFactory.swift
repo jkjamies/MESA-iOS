@@ -26,7 +26,12 @@ struct CounterFactory {
         let usecase = DivideUsecase()
         
         TrapezioContainer(
-            makeStore: CounterStore(screen: screen, divideUsecase: usecase, navigator: navigator, interop: interop),
+            makeStore: CounterStore(
+                screen: screen,
+                divideUsecase: usecase,
+                navigator: navigator,
+                interop: interop
+            ),
             ui: CounterUI()
         )
     }

@@ -14,20 +14,9 @@
  * limitations under the License.
  */
 
-import Trapezio
+import Foundation
 
-/// A secondary screen to demonstrate navigation interoperability.
-struct SummaryScreen: TrapezioScreen {
-    let value: Int
-}
-
-struct SummaryState: TrapezioState {
-    var value: Int
-    var lastSavedValue: Int? = nil
-}
-
-enum SummaryEvent: TrapezioEvent {
-    case printValue
-    case save
-    case back
+public protocol SummaryRepository: Sendable {
+    func saveValue(_ value: Int) async throws
+    func observeLastValue() -> AsyncStream<Int?>
 }

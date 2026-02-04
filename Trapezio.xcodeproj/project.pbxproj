@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		2D4544562F12F45C007AE19F /* Trapezio in Frameworks */ = {isa = PBXBuildFile; productRef = 2D4544552F12F45C007AE19F /* Trapezio */; };
 		2DB23A512F2E831100482FD0 /* TrapezioNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 2DB23A502F2E831100482FD0 /* TrapezioNavigation */; };
+		2DDD95742F32FB67008E11C0 /* TrapezioStrata in Frameworks */ = {isa = PBXBuildFile; productRef = 2DDD95732F32FB67008E11C0 /* TrapezioStrata */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2DB23A512F2E831100482FD0 /* TrapezioNavigation in Frameworks */,
+				2DDD95742F32FB67008E11C0 /* TrapezioStrata in Frameworks */,
 				2D4544562F12F45C007AE19F /* Trapezio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -153,6 +155,7 @@
 			packageProductDependencies = (
 				2D4544552F12F45C007AE19F /* Trapezio */,
 				2DB23A502F2E831100482FD0 /* TrapezioNavigation */,
+				2DDD95732F32FB67008E11C0 /* TrapezioStrata */,
 			);
 			productName = TrapezioCounter;
 			productReference = 2D4544082F12F2C4007AE19F /* TrapezioCounter.app */;
@@ -633,6 +636,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2D4544542F12F45C007AE19F /* XCLocalSwiftPackageReference "../Trapezio" */;
 			productName = TrapezioNavigation;
+		};
+		2DDD95732F32FB67008E11C0 /* TrapezioStrata */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2D4544542F12F45C007AE19F /* XCLocalSwiftPackageReference "../Trapezio" */;
+			productName = TrapezioStrata;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

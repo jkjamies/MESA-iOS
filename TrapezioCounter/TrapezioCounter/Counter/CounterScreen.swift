@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import Foundation
 import Trapezio
 
 /// The "Parcelable" ID.
@@ -26,6 +27,7 @@ struct CounterScreen: TrapezioScreen {
 struct CounterState: TrapezioState {
     var count: Int
     var isSaving: Bool = false
+    var message: TrapezioMessage?
 }
 
 /// The Actions.
@@ -35,4 +37,6 @@ enum CounterEvent: TrapezioEvent {
     case divideByTwo // example of usecase
     case goToSummary
     case requestHelp
+    case throwError
+    case clearError(id: UUID)
 }

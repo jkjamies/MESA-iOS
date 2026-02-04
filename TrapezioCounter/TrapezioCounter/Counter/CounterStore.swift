@@ -17,12 +17,20 @@
 import Foundation
 import Trapezio
 import TrapezioNavigation
+import TrapezioStrata
 
 @MainActor
 final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
     private let divideUsecase: any DivideUsecaseProtocol
     private let navigator: (any TrapezioNavigator)?
     private let interop: (any TrapezioInterop)?
+    public let messageManager = TrapezioMessageManager()
+
+    
+    // Mock error for demonstration
+    private struct MockError: StrataException {
+        let message: String
+    }
     
     init(
         screen: CounterScreen,
@@ -34,6 +42,21 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
         self.navigator = navigator
         self.interop = interop
         super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
+        setupBindings()
+    }
+    
+    private func setupBindings() {
+        // Bind Message Manager
+        Task { [weak self] in
+            for await messages in self?.messageManager.messagesSequence ?? AsyncStream(unfolding: { nil }) {
+                await MainActor.run {
+                    self?.update { $0.message = messages.first }
+                }
+            }
+        }
+            
+        // Bind UseCase stream
+
     }
     
     override func handle(event: CounterEvent) {
@@ -43,14 +66,21 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
         case .decrement:
             update { $0.count -= 1 }
         case .divideByTwo:
-            Task {
-                let result = await divideUsecase.execute(value: state.count)
-                update { $0.count = result }
+            strataLaunch { [weak self] in
+                guard let self else { return }
+                let result = await self.divideUsecase.execute(value: self.state.count)
+                await MainActor.run {
+                    self.update { $0.count = result }
+                }
             }
         case .goToSummary:
             navigator?.goTo(SummaryScreen(value: state.count))
         case .requestHelp:
             interop?.send(AppInterop.showAlert(message: "This is a simple counter. Press +/- to change value."))
+        case .throwError: // Needs to be added to Event enum first, usually
+            messageManager.emitError(MockError(message: "Simulated Failure"))
+        case .clearError(let id):
+            messageManager.clearMessage(id: id)
         }
     }
 }

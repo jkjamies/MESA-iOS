@@ -17,12 +17,27 @@
 import SwiftUI
 import Trapezio
 import TrapezioNavigation
+import SwiftData
 
 struct SummaryFactory {
     @ViewBuilder @MainActor
     static func make(screen: SummaryScreen, navigator: (any TrapezioNavigator)?) -> some View {
-        TrapezioContainer(
-            makeStore: SummaryStore(screen: screen, navigator: navigator),
+        // Composition Root: Assemble dependencies
+        let repo: SummaryRepository
+        if #available(iOS 17, *) {
+            repo = SummaryRepositoryImpl(container: PersistenceService.shared.container)
+        } else {
+            repo = InMemorySummaryRepository()
+        }
+        
+        let saveUseCase = SaveLastValueUseCase(repository: repo)
+        let observeUseCase = ObserveLastValueUseCase(repository: repo)
+        
+        return TrapezioContainer(
+            makeStore: SummaryStore(screen: screen, 
+                                    navigator: navigator,
+                                    saveUseCase: saveUseCase,
+                                    observeUseCase: observeUseCase),
             ui: SummaryUI()
         )
     }

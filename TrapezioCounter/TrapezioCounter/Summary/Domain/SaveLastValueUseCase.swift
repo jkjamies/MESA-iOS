@@ -14,20 +14,24 @@
  * limitations under the License.
  */
 
-import Trapezio
+import Foundation
+import TrapezioStrata
 
-/// A secondary screen to demonstrate navigation interoperability.
-struct SummaryScreen: TrapezioScreen {
-    let value: Int
-}
-
-struct SummaryState: TrapezioState {
-    var value: Int
-    var lastSavedValue: Int? = nil
-}
-
-enum SummaryEvent: TrapezioEvent {
-    case printValue
-    case save
-    case back
+/// Use Case to save the last value.
+/// Conforms to StrataInteractor protocol.
+public final class SaveLastValueUseCase: StrataInteractor {
+    public typealias P = Int
+    public typealias T = Void
+    
+    private let repository: SummaryRepository
+    
+    public init(repository: SummaryRepository) {
+        self.repository = repository
+    }
+    
+    public func execute(params: Int) async -> StrataResult<Void> {
+        return await executeCatching(params: params) { val in
+            try await repository.saveValue(val)
+        }
+    }
 }

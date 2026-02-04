@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-import Trapezio
+import SwiftData
+import Foundation
 
-/// A secondary screen to demonstrate navigation interoperability.
-struct SummaryScreen: TrapezioScreen {
-    let value: Int
-}
-
-struct SummaryState: TrapezioState {
-    var value: Int
-    var lastSavedValue: Int? = nil
-}
-
-enum SummaryEvent: TrapezioEvent {
-    case printValue
-    case save
-    case back
+@available(iOS 17, *)
+@Model
+public final class TrapezioModel {
+    public var lastSavedValue: Int
+    public var timestamp: Date
+    
+    public init(lastSavedValue: Int, timestamp: Date = Date()) {
+        self.lastSavedValue = lastSavedValue
+        self.timestamp = timestamp
+    }
 }

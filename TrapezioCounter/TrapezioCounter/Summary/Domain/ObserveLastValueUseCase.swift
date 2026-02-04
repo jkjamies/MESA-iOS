@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import Trapezio
+import Foundation
+import TrapezioStrata
 
-/// A secondary screen to demonstrate navigation interoperability.
-struct SummaryScreen: TrapezioScreen {
-    let value: Int
-}
-
-struct SummaryState: TrapezioState {
-    var value: Int
-    var lastSavedValue: Int? = nil
-}
-
-enum SummaryEvent: TrapezioEvent {
-    case printValue
-    case save
-    case back
+/// Use Case to observe the last saved value.
+/// Inherits from StrataSubjectInteractor for consistency with Android architecture.
+public class ObserveLastValueUseCase: StrataSubjectInteractor<Void, Int?> {
+    private let repository: SummaryRepository
+    
+    public init(repository: SummaryRepository) {
+        self.repository = repository
+        super.init()
+    }
+    
+    public override func createObservable(params: Void) -> AsyncStream<Int?> {
+        return repository.observeLastValue()
+    }
 }
