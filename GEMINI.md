@@ -49,11 +49,15 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
 ### 3. Data Flow
 ```mermaid
 flowchart LR
-    Event --> Store
-    Store --> UseCase
-    UseCase --> Repository
-    Store --> State
-    State --> UI
+    subgraph Top [ ]
+        direction LR
+        View["📱 View<br/>(UI)"] --> Event["⚡️ Event"]
+        Store --> State["📦 State"]
+        Event --> Store["🧠 Store<br/>(Logic)"]
+        State --> View
+    end
+    
+    Store -->|UseCase| Logic["⚙️ Logic"]
 ```
 
 ---
@@ -120,4 +124,24 @@ Features/Summary/
   │   ├── SummaryUI.swift
   │   └── SummaryScreen.swift
   └── SummaryFactory.swift   # Composition Root
+```
+
+### Dependency Graph
+```mermaid
+graph LR
+    subgraph Presentation
+    Screen --> UI_View[View]
+    UI_View --> Store
+    end
+    
+    subgraph Domain
+    UseCase --> Repo[Repository Protocol]
+    end
+    
+    subgraph Data
+    RepoImpl[Repository Impl] -.->|Implements| Repo
+    RepoImpl --> SwiftData
+    end
+    
+    Store --> UseCase
 ```

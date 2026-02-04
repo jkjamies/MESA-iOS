@@ -16,15 +16,21 @@ Trapezio is a production-grade architectural library for SwiftUI, designed to en
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#007AFF', 'primaryTextColor': '#fff', 'primaryBorderColor': '#0051a8', 'lineColor': '#888', 'secondaryColor': '#f2f2f7', 'tertiaryColor': '#e5e5ea'}}}%%
 flowchart LR
-    A(("👆 User<br/>Action")) -->|Event| B["🧠 Store<br/>(Logic)"]
-    B -->|UseCase| C["⚙️ Logic"]
-    B -->|State| D["📱 View<br/>(UI)"]
-    D -.->|Render| A
+    subgraph Top [ ]
+        direction LR
+        View["📱 View<br/>(UI)"] --> Event["⚡️ Event"]
+        Store --> State["📦 State"]
+        Event --> Store["🧠 Store<br/>(Logic)"]
+        State --> View
+    end
     
-    style A fill:#007AFF,stroke:#0051a8,stroke-width:2px,color:#fff,shadow:true
-    style B fill:#34C759,stroke:#248A3D,stroke-width:2px,color:#fff,shadow:true
-    style D fill:#FF9500,stroke:#B36B00,stroke-width:2px,color:#fff,shadow:true
-    style C fill:#AF52DE,stroke:#7A399B,color:#fff,stroke-dasharray: 5 5
+    Store -->|UseCase| Logic["⚙️ Logic"]
+    
+    style View fill:#FF9500,stroke:#B36B00,stroke-width:2px,color:#fff,shadow:true
+    style Event fill:#007AFF,stroke:#0051a8,stroke-width:2px,color:#fff,shadow:true
+    style Store fill:#34C759,stroke:#248A3D,stroke-width:2px,color:#fff,shadow:true
+    style State fill:#5856D6,stroke:#3634A3,stroke-width:2px,color:#fff,shadow:true
+    style Logic fill:#AF52DE,stroke:#7A399B,color:#fff,stroke-dasharray: 5 5
 ```
 
 ---
@@ -69,13 +75,10 @@ Trapezio strictly enforces **Clean Architecture** combined with **MVI** for the 
 ### Dependency Graph
 
 ```mermaid
-graph TD
-    UI[Presentation Layer] --> Domain[Domain Layer]
-    Data[Data Layer] --> Domain
-    
+graph LR
     subgraph Presentation
-    Store --> Screen
-    UI_View[View] --> Store
+    Screen --> UI_View[View]
+    UI_View --> Store
     end
     
     subgraph Domain
@@ -86,6 +89,8 @@ graph TD
     RepoImpl[Repository Impl] -.->|Implements| Repo
     RepoImpl --> SwiftData
     end
+    
+    Store --> UseCase
 ```
 
 ---
