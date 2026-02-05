@@ -18,7 +18,7 @@ import Foundation
 import TrapezioStrata
 
 /// Use Case to observe the last saved value.
-/// Inherits from StrataSubjectInteractor for consistency with Android architecture.
+/// Standard StrataSubjectInteractor implementation for observing values.
 public class ObserveLastValueUseCase: StrataSubjectInteractor<Void, Int?> {
     private let repository: SummaryRepository
     

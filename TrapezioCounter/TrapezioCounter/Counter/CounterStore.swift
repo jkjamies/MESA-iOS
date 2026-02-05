@@ -78,7 +78,7 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
         case .requestHelp:
             interop?.send(AppInterop.showAlert(message: "This is a simple counter. Press +/- to change value."))
         case .throwError: // Needs to be added to Event enum first, usually
-            messageManager.emitError(MockError(message: "Simulated Failure"))
+            messageManager.emit(TrapezioMessage(message: "Simulated Failure"))
         case .clearError(let id):
             messageManager.clearMessage(id: id)
         }

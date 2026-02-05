@@ -15,6 +15,7 @@
  */
 
 import SwiftUI
+import Observation
 import Trapezio
 
 /// A lightweight SwiftUI host that owns a `NavigationStack` and a library-managed `TrapezioNavigator`.
@@ -29,7 +30,7 @@ public struct TrapezioNavigationHost: View {
     /// Receives custom navigation/dismissal requests for legacy interop.
     public typealias InteropHandler = (_ event: TrapezioInteropEvent) -> Void
 
-    @StateObject private var navigator: TrapezioStackNavigator
+    @State private var navigator: TrapezioStackNavigator
 
     private let builder: (any TrapezioScreen, any TrapezioNavigator, any TrapezioInterop) -> AnyView
 
@@ -42,7 +43,7 @@ public struct TrapezioNavigationHost: View {
         onInterop: InteropHandler? = nil,
         @ViewBuilder builder: @escaping (_ screen: any TrapezioScreen, _ navigator: any TrapezioNavigator, _ interop: any TrapezioInterop) -> Content
     ) {
-        _navigator = StateObject(wrappedValue: TrapezioStackNavigator(root: root, onInterop: onInterop))
+        _navigator = State(wrappedValue: TrapezioStackNavigator(root: root, onInterop: onInterop))
         self.builder = { (screen: any TrapezioScreen, navigator: any TrapezioNavigator, interop: any TrapezioInterop) -> AnyView in
             AnyView(builder(screen, navigator, interop))
         }
@@ -85,10 +86,12 @@ public struct TrapezioAnyScreen: Hashable {
 }
 
 /// A library-owned navigator that drives a `NavigationStack` by mutating its path.
+/// A library-owned navigator that drives a `NavigationStack` by mutating its path.
 @MainActor
-internal final class TrapezioStackNavigator: ObservableObject, TrapezioNavigator {
+@Observable
+internal final class TrapezioStackNavigator: TrapezioNavigator {
 
-    @Published internal var path: [TrapezioAnyScreen] = []
+    internal var path: [TrapezioAnyScreen] = []
     internal var root: (any TrapezioScreen)?
     
     internal let interop: any TrapezioInterop
@@ -114,32 +117,18 @@ internal final class TrapezioStackNavigator: ObservableObject, TrapezioNavigator
     }
     
     internal func dismissTo(_ screen: any TrapezioScreen) {
-        // Find the *last* occurrence of this screen in the path.
-        // We compare the 'base' screens for equality. Since TrapezioScreen is Hashable (Equatable),
-        // we assume the user intends to go back to the most recent instance of that screen state.
-        
-        // If the 'screen' passed in matches the current tip, we do nothing ?
-        // Or do we assume 'dismissTo' implies we want to *reveal* that screen, so we pop everything *after* it.
-        
-
-        
-        // Iterate backwards to find the target
+        // Find the last occurrence of the screen in the path to pop back to the most recent instance.
         if let index = path.lastIndex(where: { $0.base.hashValue == screen.hashValue }) {
-             // Found it in the stack.
-             // We want to keep everything up to (and including) 'index'.
-             // So we remove everything *after* index.
+             // Keep everything up to (and including) the target index.
              let newPath = Array(path.prefix(through: index))
              
-             // Optimization: only update if changed (though prefix should create new array)
              if newPath.count < path.count {
                  path = newPath
              }
         } else if let root = root, root.hashValue == screen.hashValue {
-             // It matches the root. Clear the stack.
              path.removeAll()
         } else {
-            // Not found in stack or root. Do nothing (or log warning).
-            print("TrapezioNavigator: returned to \(screen) failed - not found in stack.")
+            print("TrapezioNavigator warning: dismissTo(\(screen)) failed - screen not found in stack.")
         }
     }
 }

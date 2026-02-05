@@ -11,9 +11,9 @@ Your code is robust, strictly typed, and concurrency-safe (Swift 6 ready).
 ---
 
 ## 🎯 Project Purpose & Vision
-Trapezio is the iOS counterpart to the Android **Trapeze** library.
-*   **The Goal**: Achieve architectural parity between iOS and Android. Code structure, class names, and data flow patterns should mirror each other where idiomatic.
-*   **The Vision**: A unified mental model for mobile development. A developer switch from Android to iOS should feel at home.
+Trapezio is a rigid MESA implementation for iOS.
+*   **The Goal**: Provide a rigorous, opinionated architecture for scalable iOS apps.
+*   **The Vision**: Eliminate decision fatigue by enforcing clear separation of concerns.
 *   **Strictness**: We do not compromise on separation of concerns. UI *never* does logic. Logic *never* touches `UIKit` or external data sources directly.
 
 ---

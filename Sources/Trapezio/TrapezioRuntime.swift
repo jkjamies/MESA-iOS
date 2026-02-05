@@ -22,7 +22,7 @@ where S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent,
       Store: TrapezioStore<S, State, Event>, UI: TrapezioUI,
       UI.State == State, UI.Event == Event {
     
-    @ObservedObject var presenter: Store
+    let presenter: Store
     private let ui: UI
     
     internal init(presenter: Store, ui: UI) {

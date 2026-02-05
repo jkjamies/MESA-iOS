@@ -15,7 +15,7 @@
  */
 
 import Foundation
-@preconcurrency import Combine
+import Observation
 
 /// A transient message to be displayed to the user (e.g., Snackbar, Alert).
 public struct TrapezioMessage: Equatable, Identifiable, Sendable {
@@ -27,58 +27,63 @@ public struct TrapezioMessage: Equatable, Identifiable, Sendable {
         self.id = id
     }
     
-    public init(error: Error, id: UUID = UUID()) {
-        self.message = error.localizedDescription
-        self.id = id
-    }
+
 }
 
 /// Manages a queue of transient messages.
 /// Observe `message` to show the current message.
 @MainActor
-public class TrapezioMessageManager: ObservableObject {
-    @Published public private(set) var messages: [TrapezioMessage] = []
+@Observable
+public class TrapezioMessageManager {
+    public private(set) var messages: [TrapezioMessage] = []
     
     public var message: TrapezioMessage? {
         messages.first
     }
     
-    public var messagesStream: AnyPublisher<[TrapezioMessage], Never> {
-        $messages.eraseToAnyPublisher()
-    }
-    
+    /// A strict AsyncStream sequence of message list updates.
+    /// This replaces the Combine `messagesStream`.
     public var messagesSequence: AsyncStream<[TrapezioMessage]> {
         AsyncStream { continuation in
-            let cancellable = $messages
-                .sink { messages in
-                    continuation.yield(messages)
-                }
+            // Emit the initial value immediately
+            continuation.yield(messages)
             
-            continuation.onTermination = { _ in
-                cancellable.cancel()
+            // Register a listener for future updates
+            let id = UUID()
+            self.listeners[id] = { messages in
+                continuation.yield(messages)
+            }
+            
+            continuation.onTermination = { [weak self] _ in
+                Task { @MainActor in
+                    self?.listeners.removeValue(forKey: id)
+                }
             }
         }
     }
     
+    private var listeners: [UUID: @Sendable ([TrapezioMessage]) -> Void] = [:]
+    
     public init() {}
     
-    public func emitMessage(_ message: TrapezioMessage) {
+    public func emit(_ message: TrapezioMessage) {
         messages.append(message)
-    }
-    
-    public func emitMessage(_ message: String) {
-        emitMessage(TrapezioMessage(message: message))
-    }
-    
-    public func emitError(_ error: Error) {
-        emitMessage(TrapezioMessage(error: error))
+        notifyListeners()
     }
     
     public func clearMessage(id: UUID) {
         messages.removeAll { $0.id == id }
+        notifyListeners()
     }
     
     public func clearAll() {
         messages.removeAll()
+        notifyListeners()
+    }
+    
+    private func notifyListeners() {
+        for listener in listeners.values {
+            listener(messages)
+        }
     }
 }

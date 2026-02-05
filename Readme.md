@@ -2,7 +2,7 @@
 
 **iOS Implementation of the MESA Framework (Modular, Explicit, State-driven, Architecture)**
 
-Trapezio is a production-grade architectural library for SwiftUI, designed to enforce unidirectional data flow (UDF), strictly typed navigation, and a clean separation of concerns. It aligns conceptually with the Android **Trapeze** library to ensure cross-platform architectural parity.
+Trapezio is a production-grade architectural library for SwiftUI, designed to enforce unidirectional data flow (UDF), strictly typed navigation, and a clean separation of concerns.
 
 ## 🏛 MESA Architecture Pillars
 
