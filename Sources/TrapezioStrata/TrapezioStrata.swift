@@ -105,14 +105,13 @@ private struct GenericStrataException: StrataException {
     let message: String
 }
 
-/// Helper to launch a Task and ensure completion (fire-and-forget style but Task-based).
-/// Similar to Android's launch structure but adapted for Swift concurrency.
+/// Helper to launch a Task on the MainActor, ensuring safe UI updates.
 @discardableResult
 public func strataLaunch(
     priority: TaskPriority? = nil,
-    operation: @escaping @Sendable () async -> Void
+    operation: @escaping @MainActor @Sendable () async -> Void
 ) -> Task<Void, Never> {
-    return Task(priority: priority) {
+    return Task(priority: priority) { @MainActor in
         await operation()
     }
 }
