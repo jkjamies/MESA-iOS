@@ -47,12 +47,8 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
     
     private func setupBindings() {
         // Bind Message Manager
-        Task { [weak self] in
-            for await messages in self?.messageManager.messagesSequence ?? AsyncStream(unfolding: { nil }) {
-                await MainActor.run {
-                    self?.update { $0.message = messages.first }
-                }
-            }
+        strataCollect(messageManager.messagesSequence) { [weak self] messages in
+             self?.update { $0.message = messages.first }
         }
             
         // Bind UseCase stream

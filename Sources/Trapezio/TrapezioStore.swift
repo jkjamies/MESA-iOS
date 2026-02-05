@@ -43,4 +43,8 @@ open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: Trapezi
     where U.State == State, U.Event == Event {
         TrapezioRuntime(presenter: self, ui: ui)
     }
+
+
+
+
 }

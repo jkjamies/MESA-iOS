@@ -45,6 +45,9 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
     *   Returns `StrataResult<T>`.
 *   **`StrataSubjectInteractor`**: Class for observing streams of data.
     *   Exposes `AsyncStream<T>`.
+*   **Concurrency Primitives (`TrapezioStrata`)**:
+    *   `strataLaunch { ... }`: One-shot async task on MainActor.
+    *   `strataCollect(stream) { ... }`: Stream observation on MainActor.
 
 ### 3. Data Flow
 ```mermaid

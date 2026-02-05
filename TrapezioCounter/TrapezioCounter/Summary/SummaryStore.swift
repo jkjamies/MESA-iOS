@@ -26,7 +26,7 @@ final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEven
     private let saveUseCase: SaveLastValueUseCase
     private let observeUseCase: ObserveLastValueUseCase
 
-    init(screen: SummaryScreen, 
+    init(screen: SummaryScreen,
          navigator: (any TrapezioNavigator)?,
          saveUseCase: SaveLastValueUseCase,
          observeUseCase: ObserveLastValueUseCase) {
@@ -43,12 +43,8 @@ final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEven
     private func observe() {
         // Observe use case
         let stream = observeUseCase.createObservable(params: ())
-        Task {
-            for await val in stream {
-                await MainActor.run {
-                    self.update { $0.lastSavedValue = val }
-                }
-            }
+        strataCollect(stream) { [weak self] val in
+            self?.update { $0.lastSavedValue = val }
         }
     }
 
@@ -57,13 +53,14 @@ final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEven
         case .printValue:
             print("Trapezio Counter Value: \(state.value)")
         case .save:
-            Task {
+            strataLaunch {
                 // StrataInteractor returns a Result, does not throw directly
-                let result = await saveUseCase.execute(params: state.value)
-                result.onFailure { error in
-                    print("Failed to save: \(error)")
+                let result = await self.saveUseCase.execute(params: self.state.value)
+                result.onSuccess { _ in
+                    print("Value saved successfully.")
+                }.onFailure { (error: any StrataException) in
+                    print("Failed to save: \(error.message)")
                 }
-                // Success is handled by observation updating the state logic
             }
         case .back:
             navigator?.dismiss()

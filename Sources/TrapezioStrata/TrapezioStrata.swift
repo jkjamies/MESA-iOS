@@ -115,3 +115,18 @@ public func strataLaunch(
         await operation()
     }
 }
+
+/// Helper to collect an AsyncStream on the MainActor.
+/// Matches `strataLaunch` paradigm for stream observation.
+@discardableResult
+public func strataCollect<T: Sendable>(
+    _ stream: AsyncStream<T>,
+    priority: TaskPriority? = nil,
+    action: @escaping @MainActor (T) -> Void
+) -> Task<Void, Never> {
+    return Task(priority: priority) { @MainActor in
+        for await value in stream {
+            action(value)
+        }
+    }
+}

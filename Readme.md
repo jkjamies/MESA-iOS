@@ -41,7 +41,7 @@ flowchart LR
 |:---|:---|:---|
 | **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI` |
 | **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost`, `TrapezioInterop` |
-| **TrapezioStrata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch` |
+| **TrapezioStrata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `strataLaunch`, `strataCollect` |
 
 ---
 
@@ -121,13 +121,10 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
     override func handle(event: CounterEvent) {
         switch event {
         case .increment:
-            // Launch async work while keeping UI responsive
-            strataLaunch { [weak self] in
-                guard let self else { return }
+            // Launch async work on MainActor (explicit capture required)
+            strataLaunch {
                 let newCount = await self.incrementUseCase.execute(current: self.state.count)
-                await MainActor.run {
-                    self.update { $0.count = newCount }
-                }
+                self.update { $0.count = newCount }
             }
         }
     }
