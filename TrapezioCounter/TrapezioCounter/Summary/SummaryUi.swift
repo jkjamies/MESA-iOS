@@ -25,6 +25,7 @@ struct SummaryUI: TrapezioUI {
 
             Text("\(state.value)")
                 .font(.system(size: 60, weight: .bold, design: .monospaced))
+                .accessibilityIdentifier("summaryValueLabel")
 
             HStack(spacing: 16) {
             }
@@ -33,6 +34,7 @@ struct SummaryUI: TrapezioUI {
                 Text("Last Saved: \(saved)")
                     .font(.headline)
                     .foregroundColor(.secondary)
+                    .accessibilityIdentifier("lastSavedLabel")
             } else {
                 Text("No value saved yet")
                     .font(.caption)
@@ -42,6 +44,7 @@ struct SummaryUI: TrapezioUI {
             Button("Save Current to DB") {
                 onEvent(.save)
             }
+            .accessibilityIdentifier("saveButton")
             .buttonStyle(.borderedProminent)
             .padding(.top)
 
@@ -49,6 +52,7 @@ struct SummaryUI: TrapezioUI {
                 Button("Back") {
                     onEvent(.back)
                 }
+                .accessibilityIdentifier("backButton")
                 .buttonStyle(.bordered)
 
 

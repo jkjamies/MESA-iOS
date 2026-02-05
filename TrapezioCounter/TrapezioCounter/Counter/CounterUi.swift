@@ -23,16 +23,20 @@ struct CounterUI: TrapezioUI {
         VStack(spacing: 30) {
             Text("\(state.count)")
                 .font(.system(size: 60, weight: .bold, design: .monospaced))
+                .accessibilityIdentifier("countLabel")
             
             HStack(spacing: 20) {
                 Button("-") { onEvent(.decrement) }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("decrementButton")
                 
                 Button("÷2") { onEvent(.divideByTwo) }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("divideButton")
                 
                 Button("+") { onEvent(.increment) }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("incrementButton")
             }
 
 
@@ -51,6 +55,7 @@ struct CounterUI: TrapezioUI {
             Button("Go To Summary") {
                 onEvent(.goToSummary)
             }
+            .accessibilityIdentifier("goToSummaryButton")
             .font(.headline)
         }
 
