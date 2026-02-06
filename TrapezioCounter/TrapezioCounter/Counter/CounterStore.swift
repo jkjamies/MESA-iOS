@@ -17,12 +17,20 @@
 import Foundation
 import Trapezio
 import TrapezioNavigation
+import TrapezioStrata
 
 @MainActor
 final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
     private let divideUsecase: any DivideUsecaseProtocol
     private let navigator: (any TrapezioNavigator)?
     private let interop: (any TrapezioInterop)?
+    public let messageManager = TrapezioMessageManager()
+
+    
+    // Mock error for demonstration
+    private struct MockError: StrataException {
+        let message: String
+    }
     
     init(
         screen: CounterScreen,
@@ -34,6 +42,17 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
         self.navigator = navigator
         self.interop = interop
         super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
+        setupBindings()
+    }
+    
+    private func setupBindings() {
+        // Bind Message Manager
+        strataCollect(messageManager.messagesSequence) { [weak self] messages in
+             self?.update { $0.message = messages.first }
+        }
+            
+        // Bind UseCase stream
+
     }
     
     override func handle(event: CounterEvent) {
@@ -43,14 +62,18 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
         case .decrement:
             update { $0.count -= 1 }
         case .divideByTwo:
-            Task {
-                let result = await divideUsecase.execute(value: state.count)
-                update { $0.count = result }
+            strataLaunch {
+                let result = await self.divideUsecase.execute(value: self.state.count)
+                self.update { $0.count = result }
             }
         case .goToSummary:
             navigator?.goTo(SummaryScreen(value: state.count))
         case .requestHelp:
             interop?.send(AppInterop.showAlert(message: "This is a simple counter. Press +/- to change value."))
+        case .throwError: // Needs to be added to Event enum first, usually
+            messageManager.emit(TrapezioMessage(message: "Simulated Failure"))
+        case .clearError(let id):
+            messageManager.clearMessage(id: id)
         }
     }
 }

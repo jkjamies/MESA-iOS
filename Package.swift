@@ -22,7 +22,7 @@ import PackageDescription
 let package = Package(
     name: "Trapezio",
     platforms: [
-        .iOS(.v16),     // Your primary target
+        .iOS(.v17),     // Your primary target
         .macOS(.v14)    // The "Helper" target for fast local testing/indexing
     ],
     products: [
@@ -34,6 +34,10 @@ let package = Package(
         .library(
             name: "TrapezioNavigation",
             targets: ["TrapezioNavigation"]
+        ),
+        .library(
+            name: "TrapezioStrata",
+            targets: ["TrapezioStrata"]
         ),
     ],
     targets: [
@@ -49,6 +53,9 @@ let package = Package(
         .testTarget(
             name: "TrapezioTests",
             dependencies: ["Trapezio"]
+        ),
+        .target(
+            name: "TrapezioStrata"
         ),
     ]
 )

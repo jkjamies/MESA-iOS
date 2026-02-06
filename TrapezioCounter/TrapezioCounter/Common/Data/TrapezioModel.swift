@@ -14,25 +14,17 @@
  * limitations under the License.
  */
 
-import SwiftUI
+import SwiftData
+import Foundation
 
-@MainActor
-internal struct TrapezioRuntime<S, State, Event, Store, UI>: View
-where S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent,
-      Store: TrapezioStore<S, State, Event>, UI: TrapezioUI,
-      UI.State == State, UI.Event == Event {
+@available(iOS 17, *)
+@Model
+public final class TrapezioModel {
+    public var lastSavedValue: Int
+    public var timestamp: Date
     
-    let presenter: Store
-    private let ui: UI
-    
-    internal init(presenter: Store, ui: UI) {
-        self.presenter = presenter
-        self.ui = ui
-    }
-    
-    public var body: some View {
-        ui.map(state: presenter.state) { event in
-            presenter.handle(event: event)
-        }
+    public init(lastSavedValue: Int, timestamp: Date = Date()) {
+        self.lastSavedValue = lastSavedValue
+        self.timestamp = timestamp
     }
 }

@@ -23,28 +23,60 @@ struct CounterUI: TrapezioUI {
         VStack(spacing: 30) {
             Text("\(state.count)")
                 .font(.system(size: 60, weight: .bold, design: .monospaced))
+                .accessibilityIdentifier("countLabel")
             
             HStack(spacing: 20) {
                 Button("-") { onEvent(.decrement) }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("decrementButton")
                 
                 Button("÷2") { onEvent(.divideByTwo) }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("divideButton")
                 
                 Button("+") { onEvent(.increment) }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("incrementButton")
             }
 
-            Button("Help") { onEvent(.requestHelp) }
-                .buttonStyle(.borderless)
+
+
+            HStack {
+                Button("Help") { onEvent(.requestHelp) }
+                    .buttonStyle(.borderless)
+                
+                Button("Error") { onEvent(.throwError) }
+                    .buttonStyle(.borderless)
+                    .foregroundColor(.red)
+            }
             
             Divider().padding(.horizontal)
 
             Button("Go To Summary") {
                 onEvent(.goToSummary)
             }
+            .accessibilityIdentifier("goToSummaryButton")
             .font(.headline)
         }
+
         .padding()
+        .overlay(alignment: .bottom) {
+            if let msg = state.message {
+                VStack {
+                    Text(msg.message)
+                        .padding()
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                    Button("Dismiss") {
+                        onEvent(.clearError(id: msg.id))
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(radius: 5)
+                .padding()
+            }
+        }
     }
 }

@@ -14,25 +14,24 @@
  * limitations under the License.
  */
 
-import SwiftUI
+import Foundation
+import TrapezioStrata
 
-@MainActor
-internal struct TrapezioRuntime<S, State, Event, Store, UI>: View
-where S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent,
-      Store: TrapezioStore<S, State, Event>, UI: TrapezioUI,
-      UI.State == State, UI.Event == Event {
+/// Use Case to save the last value.
+/// Conforms to StrataInteractor protocol.
+public final class SaveLastValueUseCase: StrataInteractor {
+    public typealias P = Int
+    public typealias T = Void
     
-    let presenter: Store
-    private let ui: UI
+    private let repository: SummaryRepository
     
-    internal init(presenter: Store, ui: UI) {
-        self.presenter = presenter
-        self.ui = ui
+    public init(repository: SummaryRepository) {
+        self.repository = repository
     }
     
-    public var body: some View {
-        ui.map(state: presenter.state) { event in
-            presenter.handle(event: event)
+    public func execute(params: Int) async -> StrataResult<Void> {
+        return await executeCatching(params: params) { val in
+            try await repository.saveValue(val)
         }
     }
 }

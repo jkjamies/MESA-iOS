@@ -15,12 +15,13 @@
  */
 
 import SwiftUI
-import Combine
+import Observation
 
 @MainActor
-open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent>: ObservableObject {
+@Observable
+open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent>: Identifiable {
     public let screen: S
-    @Published public private(set) var state: State
+    public private(set) var state: State
     
     public init(screen: S, initialState: State) {
         self.screen = screen
@@ -42,4 +43,8 @@ open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: Trapezi
     where U.State == State, U.Event == Event {
         TrapezioRuntime(presenter: self, ui: ui)
     }
+
+
+
+
 }

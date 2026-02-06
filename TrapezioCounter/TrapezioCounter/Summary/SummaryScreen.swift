@@ -22,10 +22,12 @@ struct SummaryScreen: TrapezioScreen {
 }
 
 struct SummaryState: TrapezioState {
-    let value: Int
+    var value: Int
+    var lastSavedValue: Int? = nil
 }
 
 enum SummaryEvent: TrapezioEvent {
     case printValue
+    case save
     case back
 }

@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-import SwiftUI
+import SwiftData
+import Foundation
 
-@MainActor
-internal struct TrapezioRuntime<S, State, Event, Store, UI>: View
-where S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent,
-      Store: TrapezioStore<S, State, Event>, UI: TrapezioUI,
-      UI.State == State, UI.Event == Event {
+@available(iOS 17, *)
+public class PersistenceService {
+    public static let shared = PersistenceService()
     
-    let presenter: Store
-    private let ui: UI
+    public let container: ModelContainer
     
-    internal init(presenter: Store, ui: UI) {
-        self.presenter = presenter
-        self.ui = ui
-    }
-    
-    public var body: some View {
-        ui.map(state: presenter.state) { event in
-            presenter.handle(event: event)
+    private init() {
+        let schema = Schema([
+            TrapezioModel.self,
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        do {
+            container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
         }
     }
 }

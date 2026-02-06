@@ -14,25 +14,20 @@
  * limitations under the License.
  */
 
-import SwiftUI
+import Foundation
+import TrapezioStrata
 
-@MainActor
-internal struct TrapezioRuntime<S, State, Event, Store, UI>: View
-where S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent,
-      Store: TrapezioStore<S, State, Event>, UI: TrapezioUI,
-      UI.State == State, UI.Event == Event {
+/// Use Case to observe the last saved value.
+/// Standard StrataSubjectInteractor implementation for observing values.
+public class ObserveLastValueUseCase: StrataSubjectInteractor<Void, Int?> {
+    private let repository: SummaryRepository
     
-    let presenter: Store
-    private let ui: UI
-    
-    internal init(presenter: Store, ui: UI) {
-        self.presenter = presenter
-        self.ui = ui
+    public init(repository: SummaryRepository) {
+        self.repository = repository
+        super.init()
     }
     
-    public var body: some View {
-        ui.map(state: presenter.state) { event in
-            presenter.handle(event: event)
-        }
+    public override func createObservable(params: Void) -> AsyncStream<Int?> {
+        return repository.observeLastValue()
     }
 }
