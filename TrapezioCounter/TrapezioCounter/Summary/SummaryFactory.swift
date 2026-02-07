@@ -23,12 +23,7 @@ struct SummaryFactory {
     @ViewBuilder @MainActor
     static func make(screen: SummaryScreen, navigator: (any TrapezioNavigator)?) -> some View {
         // Composition Root: Assemble dependencies
-        let repo: SummaryRepository
-        if #available(iOS 17, *) {
-            repo = SummaryRepositoryImpl(container: PersistenceService.shared.container)
-        } else {
-            repo = InMemorySummaryRepository()
-        }
+        let repo = SummaryRepositoryImpl(container: PersistenceService.shared.container)
         
         let saveUseCase = SaveLastValueUseCase(repository: repo)
         let observeUseCase = ObserveLastValueUseCase(repository: repo)

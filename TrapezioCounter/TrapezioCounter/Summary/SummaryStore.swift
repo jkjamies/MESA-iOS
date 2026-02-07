@@ -37,14 +37,19 @@ final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEven
         super.init(screen: screen, initialState: SummaryState(value: screen.value))
         
         // Start observing
-        self.observe()
+        self.setupBindings()
     }
     
-    private func observe() {
-        // Observe use case
+    private func setupBindings() {
+        // Observe last saved value
         let stream = observeUseCase.createObservable(params: ())
         strataCollect(stream) { [weak self] val in
             self?.update { $0.lastSavedValue = val }
+        }
+        
+        // Observe save usecase inProgress state (Trapeze pattern)
+        strataCollect(saveUseCase.inProgressStream) { [weak self] isLoading in
+            self?.update { $0.isLoading = isLoading }
         }
     }
 
@@ -54,7 +59,6 @@ final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEven
             print("Trapezio Counter Value: \(state.value)")
         case .save:
             strataLaunch {
-                // StrataInteractor returns a Result, does not throw directly
                 let result = await self.saveUseCase.execute(params: self.state.value)
                 result.onSuccess { _ in
                     print("Value saved successfully.")

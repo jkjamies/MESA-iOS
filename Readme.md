@@ -39,8 +39,8 @@ flowchart LR
 
 | Module | Purpose | Key Components |
 |:---|:---|:---|
-| **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI` |
-| **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost`, `TrapezioInterop` |
+| **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioInterop` |
+| **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost` |
 | **TrapezioStrata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `strataLaunch`, `strataCollect` |
 
 ---
