@@ -15,7 +15,7 @@
  */
 
 import Foundation
-import TrapezioNavigation
+import Trapezio
 
 /// Defines the external navigation events for the TrapezioCounter app.
 enum AppInterop: TrapezioInteropEvent {

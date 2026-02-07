@@ -67,7 +67,7 @@ public struct TrapezioNavigationHost: View {
 }
 
 /// Type-erased `TrapezioScreen` wrapper used as a `NavigationStack` path element.
-public struct TrapezioAnyScreen: Hashable {
+internal struct TrapezioAnyScreen: Hashable {
     public let id: UUID
     public let base: any TrapezioScreen
 
