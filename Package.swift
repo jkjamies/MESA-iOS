@@ -57,5 +57,13 @@ let package = Package(
         .target(
             name: "TrapezioStrata"
         ),
+        .testTarget(
+            name: "TrapezioNavigationTests",
+            dependencies: ["TrapezioNavigation"]
+        ),
+        .testTarget(
+            name: "TrapezioStrataTests",
+            dependencies: ["TrapezioStrata"]
+        ),
     ]
 )

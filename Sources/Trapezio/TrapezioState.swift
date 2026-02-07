@@ -16,5 +16,16 @@
 
 import Foundation
 
-/// Marker protocol for all feature state models
+/// An immutable value that fully describes a feature's display at a point in time.
+///
+/// Conform your feature's state struct to this protocol. The `Equatable` requirement enables
+/// ``TrapezioStore/update(_:)`` to skip redundant publishes when the state hasn't changed.
+///
+/// ```swift
+/// struct CounterState: TrapezioState {
+///     var count: Int = 0
+/// }
+/// ```
+///
+/// - Important: Use value types (structs). State must never contain reference types that mutate externally.
 public protocol TrapezioState: Equatable { }

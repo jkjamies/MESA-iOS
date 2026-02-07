@@ -17,6 +17,7 @@
 import SwiftUI
 import Observation
 import Trapezio
+import os
 
 /// A lightweight SwiftUI host that owns a `NavigationStack` and a library-managed `TrapezioNavigator`.
 ///
@@ -85,7 +86,8 @@ internal struct TrapezioAnyScreen: Hashable {
     }
 }
 
-/// A library-owned navigator that drives a `NavigationStack` by mutating its path.
+private let logger = Logger(subsystem: "Trapezio", category: "Navigation")
+
 /// A library-owned navigator that drives a `NavigationStack` by mutating its path.
 @MainActor
 @Observable
@@ -118,17 +120,19 @@ internal final class TrapezioStackNavigator: TrapezioNavigator {
     
     internal func dismissTo(_ screen: any TrapezioScreen) {
         // Find the last occurrence of the screen in the path to pop back to the most recent instance.
-        if let index = path.lastIndex(where: { $0.base.hashValue == screen.hashValue }) {
+        // Use AnyHashable for proper Equatable comparison (hashValue alone risks collisions).
+        let target = AnyHashable(screen)
+        if let index = path.lastIndex(where: { AnyHashable($0.base) == target }) {
              // Keep everything up to (and including) the target index.
              let newPath = Array(path.prefix(through: index))
-             
+
              if newPath.count < path.count {
                  path = newPath
              }
-        } else if let root = root, root.hashValue == screen.hashValue {
+        } else if let root = root, AnyHashable(root) == target {
              path.removeAll()
         } else {
-            print("TrapezioNavigator warning: dismissTo(\(screen)) failed - screen not found in stack.")
+            logger.warning("dismissTo(\(String(describing: screen))) failed — screen not found in stack.")
         }
     }
 }

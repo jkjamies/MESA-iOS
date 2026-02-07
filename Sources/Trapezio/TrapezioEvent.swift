@@ -16,5 +16,16 @@
 
 import Foundation
 
-/// Marker protocol for all user-driven actions
+/// A user intent emitted by the UI layer and handled by a ``TrapezioStore``.
+///
+/// Model events as an enum so the store can exhaustively switch over all possible user actions.
+///
+/// ```swift
+/// enum CounterEvent: TrapezioEvent {
+///     case increment
+///     case decrement
+/// }
+/// ```
+///
+/// - Note: Events flow unidirectionally: **UI -> Store**. The UI never reads events back.
 public protocol TrapezioEvent {}

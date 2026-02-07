@@ -36,11 +36,17 @@ open class StrataInteractor<P: Sendable, T: Sendable>: @unchecked Sendable {
     private var inProgressContinuation: AsyncStream<Bool>.Continuation?
     
     /// Stream for observing loading state changes.
+    ///
+    /// Emits the current value immediately upon subscription, then emits on every
+    /// ``execute(params:)`` start/finish. Only one stream is created per interactor instance.
     public private(set) lazy var inProgressStream: AsyncStream<Bool> = {
         AsyncStream { [weak self] continuation in
             self?.inProgressContinuation = continuation
             // Emit initial state
             continuation.yield(self?.inProgress ?? false)
+            continuation.onTermination = { [weak self] _ in
+                self?.inProgressContinuation = nil
+            }
         }
     }()
     
