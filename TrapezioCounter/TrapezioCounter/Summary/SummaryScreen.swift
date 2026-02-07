@@ -24,6 +24,7 @@ struct SummaryScreen: TrapezioScreen {
 struct SummaryState: TrapezioState {
     var value: Int
     var lastSavedValue: Int? = nil
+    var isLoading: Bool = false
 }
 
 enum SummaryEvent: TrapezioEvent {

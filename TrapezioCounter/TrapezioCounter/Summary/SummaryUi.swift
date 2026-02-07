@@ -41,12 +41,18 @@ struct SummaryUI: TrapezioUI {
                     .foregroundColor(.secondary)
             }
             
-            Button("Save Current to DB") {
-                onEvent(.save)
+            if state.isLoading {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .accessibilityIdentifier("loadingIndicator")
+            } else {
+                Button("Save Current to DB") {
+                    onEvent(.save)
+                }
+                .accessibilityIdentifier("saveButton")
+                .buttonStyle(.borderedProminent)
             }
-            .accessibilityIdentifier("saveButton")
-            .buttonStyle(.borderedProminent)
-            .padding(.top)
+            
 
             HStack(spacing: 16) {
                 Button("Back") {

@@ -15,20 +15,60 @@
  */
 
 import Foundation
+import os
 
 // MARK: - StrataInteractor
 
-/// Base protocol for one-shot business operations.
-public protocol StrataInteractor {
-    associatedtype P
-    associatedtype T
+/// Base class for one-shot business operations with built-in loading state.
+/// Subclasses override `doWork(params:)` to implement business logic.
+/// The `inProgress` state is automatically managed during execution.
+open class StrataInteractor<P: Sendable, T: Sendable>: @unchecked Sendable {
     
-    /// Executes the interactor logic.
-    func execute(params: P) async -> StrataResult<T>
-}
-
-extension StrataInteractor {
-    /// Helper to bridge throws to StrataResult
+    // MARK: - inProgress State
+    
+    private let _inProgress = OSAllocatedUnfairLock<Bool>(initialState: false)
+    
+    /// Current loading state (thread-safe).
+    public var inProgress: Bool {
+        _inProgress.withLock { $0 }
+    }
+    
+    private var inProgressContinuation: AsyncStream<Bool>.Continuation?
+    
+    /// Stream for observing loading state changes.
+    public private(set) lazy var inProgressStream: AsyncStream<Bool> = {
+        AsyncStream { [weak self] continuation in
+            self?.inProgressContinuation = continuation
+            // Emit initial state
+            continuation.yield(self?.inProgress ?? false)
+        }
+    }()
+    
+    private func setInProgress(_ value: Bool) {
+        _inProgress.withLock { $0 = value }
+        inProgressContinuation?.yield(value)
+    }
+    
+    // MARK: - Initialization
+    
+    public init() {}
+    
+    // MARK: - Execution
+    
+    /// Override this method to implement business logic.
+    /// Do NOT call this directly — use `execute(params:)`.
+    open func doWork(params: P) async -> StrataResult<T> {
+        fatalError("doWork(params:) must be overridden")
+    }
+    
+    /// Executes the interactor, automatically managing `inProgress` state.
+    public final func execute(params: P) async -> StrataResult<T> {
+        setInProgress(true)
+        defer { setInProgress(false) }
+        return await doWork(params: params)
+    }
+    
+    /// Helper to bridge throws to StrataResult in doWork implementations.
     public func executeCatching(params: P, block: (P) async throws -> T) async -> StrataResult<T> {
         return await strataRunCatching {
             try await block(params)
@@ -38,8 +78,7 @@ extension StrataInteractor {
 
 // MARK: - Helper Functions
 
-/// Wraps an async block in a StrataResult, catching any errors and wrapping them if necessary.
-/// Note: Ideally errors are already StrataExceptions.
+/// Wraps an async block in a StrataResult, catching any errors.
 public func strataRunCatching<T>(_ block: () async throws -> T) async -> StrataResult<T> {
     do {
         let result = try await block()
@@ -47,7 +86,6 @@ public func strataRunCatching<T>(_ block: () async throws -> T) async -> StrataR
     } catch let error as any StrataException {
         return .failure(error)
     } catch {
-        // Fallback wrapper
         return .failure(GenericStrataException(message: error.localizedDescription))
     }
 }

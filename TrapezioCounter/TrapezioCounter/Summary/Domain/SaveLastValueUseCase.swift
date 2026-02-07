@@ -18,18 +18,17 @@ import Foundation
 import TrapezioStrata
 
 /// Use Case to save the last value.
-/// Conforms to StrataInteractor protocol.
-public final class SaveLastValueUseCase: StrataInteractor {
-    public typealias P = Int
-    public typealias T = Void
+/// Extends StrataInteractor with built-in inProgress state.
+public final class SaveLastValueUseCase: StrataInteractor<Int, Void> {
     
     private let repository: SummaryRepository
     
     public init(repository: SummaryRepository) {
         self.repository = repository
+        super.init()
     }
     
-    public func execute(params: Int) async -> StrataResult<Void> {
+    public override func doWork(params: Int) async -> StrataResult<Void> {
         return await executeCatching(params: params) { val in
             try await repository.saveValue(val)
         }

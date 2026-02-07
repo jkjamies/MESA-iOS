@@ -26,7 +26,6 @@ struct CounterScreen: TrapezioScreen {
 /// The Model.
 struct CounterState: TrapezioState {
     var count: Int
-    var isSaving: Bool = false
     var message: TrapezioMessage?
 }
 

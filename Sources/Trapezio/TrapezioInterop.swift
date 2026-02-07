@@ -16,12 +16,12 @@
 
 import Foundation
 
-/// Marker protocol for all external navigation/interop events.
+/// Marker protocol for all external interop events.
 /// Consumers should define their own enums conforming to this protocol.
 public protocol TrapezioInteropEvent {}
 
-/// Handles legacy or external navigation requests that fall outside the
-/// pure Trapezio screen system (e.g., deep links, UIKit bridges).
+/// Handles external communication from features to the app shell.
+/// Use for alerts, analytics, deep links, UIKit bridges, etc.
 public protocol TrapezioInterop {
     /// Sends a type-safe interop event to the host.
     func send(_ event: any TrapezioInteropEvent)

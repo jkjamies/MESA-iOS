@@ -17,7 +17,6 @@
 import Foundation
 import SwiftData
 
-@available(iOS 17, *)
 public actor SummaryRepositoryImpl: SummaryRepository, ModelActor {
     public let modelContainer: ModelContainer
     public let modelExecutor: any ModelExecutor
