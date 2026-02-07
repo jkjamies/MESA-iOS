@@ -16,6 +16,17 @@
 
 import Foundation
 
-/// The 'Parcelable' ID for a feature.
-/// Primary target for the Trapezio navigation system.
+/// A lightweight, serializable descriptor that uniquely identifies a feature destination.
+///
+/// Each feature declares a `TrapezioScreen` struct that serves as its route.
+/// Screens can carry parameters needed to initialize the destination.
+///
+/// ```swift
+/// struct SummaryScreen: TrapezioScreen {
+///     let value: Int
+/// }
+/// ```
+///
+/// - `Hashable`: Enables identity-based lookups and comparison.
+/// - `Codable`: Enables serialization for deep links and state restoration.
 public protocol TrapezioScreen: Hashable, Codable {}

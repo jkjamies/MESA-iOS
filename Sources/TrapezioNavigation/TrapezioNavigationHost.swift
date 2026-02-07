@@ -17,6 +17,7 @@
 import SwiftUI
 import Observation
 import Trapezio
+import os
 
 /// A lightweight SwiftUI host that owns a `NavigationStack` and a library-managed `TrapezioNavigator`.
 ///
@@ -85,6 +86,8 @@ internal struct TrapezioAnyScreen: Hashable {
     }
 }
 
+private let logger = Logger(subsystem: "Trapezio", category: "Navigation")
+
 /// A library-owned navigator that drives a `NavigationStack` by mutating its path.
 @MainActor
 @Observable
@@ -129,7 +132,7 @@ internal final class TrapezioStackNavigator: TrapezioNavigator {
         } else if let root = root, AnyHashable(root) == target {
              path.removeAll()
         } else {
-            print("TrapezioNavigator warning: dismissTo(\(screen)) failed - screen not found in stack.")
+            logger.warning("dismissTo(\(String(describing: screen))) failed — screen not found in stack.")
         }
     }
 }

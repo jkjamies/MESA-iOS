@@ -16,12 +16,32 @@
 
 import SwiftUI
 
-/// Maps state to pixels. Purely visual mapping.
+/// A stateless view component that maps ``TrapezioState`` to SwiftUI content.
+///
+/// The UI layer is a pure function: given the same state, it always produces the same view tree.
+/// User interactions are forwarded to the store via the `onEvent` callback — the UI never
+/// performs logic or holds mutable state itself.
+///
+/// ```swift
+/// struct CounterUI: TrapezioUI {
+///     func map(state: CounterState, onEvent: @escaping @MainActor (CounterEvent) -> Void) -> some View {
+///         Button("Count: \(state.count)") { onEvent(.increment) }
+///     }
+/// }
+/// ```
+///
+/// - Important: Runs on `@MainActor`. Never perform async work or side effects inside `map`.
 public protocol TrapezioUI {
     associatedtype State: TrapezioState
     associatedtype Event: TrapezioEvent
     associatedtype Content: View
-    
+
+    /// Renders the current state into a SwiftUI view.
+    ///
+    /// - Parameters:
+    ///   - state: The current feature state to display.
+    ///   - onEvent: Callback to emit user intents back to the ``TrapezioStore``.
+    /// - Returns: The SwiftUI view tree for this state.
     @ViewBuilder
     func map(state: State, onEvent: @escaping @MainActor (Event) -> Void) -> Content
 }

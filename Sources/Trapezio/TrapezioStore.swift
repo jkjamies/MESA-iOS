@@ -17,19 +17,57 @@
 import SwiftUI
 import Observation
 
+/// The single source of truth for a feature's presentation logic.
+///
+/// `TrapezioStore` is the brain of every MESA feature. It holds the current ``State``,
+/// receives user intents as ``Event`` values, and mutates state via ``update(_:)``.
+/// SwiftUI observes state changes automatically through the `@Observable` macro.
+///
+/// Subclass this for each feature and override ``handle(event:)`` to map events to state changes:
+///
+/// ```swift
+/// final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
+///     override func handle(event: CounterEvent) {
+///         switch event {
+///         case .increment: update { $0.count += 1 }
+///         case .decrement: update { $0.count -= 1 }
+///         }
+///     }
+/// }
+/// ```
+///
+/// - Important: This class is `@MainActor`. All state reads/writes happen on the main thread.
+/// - Note: Use ``TrapezioContainer`` to preserve store identity across SwiftUI view updates.
 @MainActor
 @Observable
 open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent>: Identifiable {
     public let screen: S
     public private(set) var state: State
-    
+
+    /// Creates a store with its associated screen and initial state.
+    ///
+    /// - Parameters:
+    ///   - screen: The screen descriptor that identifies this feature in navigation.
+    ///   - initialState: The starting state rendered on first appearance.
     public init(screen: S, initialState: State) {
         self.screen = screen
         self.state = initialState
     }
-    
+
+    /// Override this method to map user events to state mutations.
+    ///
+    /// Called by the runtime whenever the UI emits an event. The default implementation is a no-op.
+    ///
+    /// - Parameter event: The user intent to handle.
     open func handle(event: Event) { }
-    
+
+    /// Mutates state using copy-on-write semantics.
+    ///
+    /// Creates a mutable copy of the current state, applies `transform`, and only publishes
+    /// the new state if it differs from the current value (checked via `Equatable`).
+    /// This prevents unnecessary SwiftUI re-renders.
+    ///
+    /// - Parameter transform: A closure that mutates the state copy in place.
     public final func update(_ transform: (inout State) -> Void) {
         var copy = self.state
         transform(&copy)
@@ -38,13 +76,12 @@ open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: Trapezi
         }
     }
 
-    @MainActor
+    /// Binds this store to a ``TrapezioUI`` and returns the rendered SwiftUI view.
+    ///
+    /// - Parameter ui: The UI component that maps state to pixels.
+    /// - Returns: A view that observes this store's state and routes events back to ``handle(event:)``.
     public func render<U: TrapezioUI>(with ui: U) -> some View
     where U.State == State, U.Event == Event {
         TrapezioRuntime(presenter: self, ui: ui)
     }
-
-
-
-
 }
