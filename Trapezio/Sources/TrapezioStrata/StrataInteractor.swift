@@ -39,6 +39,10 @@ open class StrataInteractor<P: Sendable, T: Sendable>: @unchecked Sendable {
     ///
     /// Emits the current value immediately upon subscription, then emits on every
     /// ``execute(params:)`` start/finish. Only one stream is created per interactor instance.
+    ///
+    /// - Important: `AsyncStream` is single-consumer. Only one `for await` loop should iterate
+    ///   this stream. A second consumer on the same stream will receive no values. If you need
+    ///   multiple observers, collect this stream once and fan out from the reducer.
     public private(set) lazy var inProgressStream: AsyncStream<Bool> = {
         AsyncStream { [weak self] continuation in
             self?.inProgressContinuation = continuation

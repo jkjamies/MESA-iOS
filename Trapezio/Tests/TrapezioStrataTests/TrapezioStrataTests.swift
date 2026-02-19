@@ -50,6 +50,26 @@ final class SlowInteractor: StrataInteractor<Void, Void>, @unchecked Sendable {
     }
 }
 
+final class SimpleSubjectInteractor: StrataSubjectInteractor<Int, String>, @unchecked Sendable {
+    override func createObservable(params: Int) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            continuation.yield("value:\(params)")
+            continuation.finish()
+        }
+    }
+}
+
+final class ContinuousSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
+    override func createObservable(params: Int) -> AsyncStream<Int> {
+        AsyncStream { continuation in
+            for i in 0..<3 {
+                continuation.yield(params * 10 + i)
+            }
+            continuation.finish()
+        }
+    }
+}
+
 // MARK: - StrataResult Tests
 
 @Suite("StrataResult")
@@ -224,5 +244,263 @@ struct StrataInteractorTests {
         _ = await interactor.execute(params: ())
 
         #expect(interactor.inProgress == false)
+    }
+}
+
+// MARK: - StrataSubjectInteractor Tests
+
+@Suite("StrataSubjectInteractor")
+struct StrataSubjectInteractorTests {
+
+    @Test("emits values from createObservable")
+    func basicEmission() async {
+        let interactor = SimpleSubjectInteractor()
+        var collected: [String] = []
+
+        let task = Task {
+            for await value in interactor.stream {
+                collected.append(value)
+                if collected.count >= 1 { break }
+            }
+        }
+
+        // Small delay to let stream setup
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        interactor(42)
+
+        await task.value
+
+        #expect(collected == ["value:42"])
+    }
+
+    @Test("emits multiple values per trigger")
+    func multipleEmissions() async {
+        let interactor = ContinuousSubjectInteractor()
+        var collected: [Int] = []
+
+        let task = Task {
+            for await value in interactor.stream {
+                collected.append(value)
+                if collected.count >= 3 { break }
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        interactor(1)
+
+        await task.value
+
+        #expect(collected == [10, 11, 12])
+    }
+
+    @Test("caches latest value")
+    func valueCaching() async {
+        let interactor = SimpleSubjectInteractor()
+
+        #expect(interactor.value == nil)
+
+        let task = Task {
+            for await _ in interactor.stream {
+                break
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        interactor(7)
+
+        await task.value
+        // Small delay for value to be set
+        try? await Task.sleep(nanoseconds: 10_000_000)
+
+        #expect(interactor.value == "value:7")
+    }
+
+    @Test("re-trigger cancels previous inner stream")
+    func retriggerCancelsPrevious() async {
+        // Use a slow interactor that emits values with delays
+        final class SlowSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
+            override func createObservable(params: Int) -> AsyncStream<Int> {
+                AsyncStream { continuation in
+                    Task {
+                        for i in 0..<5 {
+                            guard !Task.isCancelled else { break }
+                            continuation.yield(params * 100 + i)
+                            try? await Task.sleep(nanoseconds: 20_000_000) // 20ms between values
+                        }
+                        continuation.finish()
+                    }
+                }
+            }
+        }
+
+        let interactor = SlowSubjectInteractor()
+        var collected: [Int] = []
+
+        let task = Task {
+            for await value in interactor.stream {
+                collected.append(value)
+                if collected.count >= 4 { break }
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        interactor(1) // Start emitting 100, 101, 102...
+
+        // Wait for first emission then re-trigger
+        try? await Task.sleep(nanoseconds: 30_000_000)
+        interactor(2) // Should cancel first, start emitting 200, 201, 202...
+
+        await task.value
+
+        // The last values should be from the second trigger (params=2)
+        let lastValue = collected.last!
+        #expect(lastValue >= 200, "Expected values from second trigger, got \(collected)")
+    }
+}
+
+// MARK: - StrataResult Additional Tests
+
+@Suite("StrataResult helpers")
+struct StrataResultHelperTests {
+
+    @Test("map transforms success value")
+    func mapSuccess() {
+        let result: StrataResult<Int> = .success(5)
+
+        let mapped = result.map { $0 * 2 }
+
+        #expect(mapped.getOrNull() == 10)
+    }
+
+    @Test("map preserves failure")
+    func mapFailure() {
+        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+
+        let mapped = result.map { $0 * 2 }
+
+        var message: String?
+        mapped.onFailure { message = $0.message }
+        #expect(mapped.getOrNull() == nil)
+        #expect(message == "err")
+    }
+
+    @Test("fold returns onSuccess value for success")
+    func foldSuccess() {
+        let result: StrataResult<Int> = .success(3)
+
+        let folded = result.fold(onSuccess: { "got \($0)" }, onFailure: { $0.message })
+
+        #expect(folded == "got 3")
+    }
+
+    @Test("fold returns onFailure value for failure")
+    func foldFailure() {
+        let result: StrataResult<Int> = .failure(TestException(message: "bad"))
+
+        let folded = result.fold(onSuccess: { "got \($0)" }, onFailure: { $0.message })
+
+        #expect(folded == "bad")
+    }
+
+    @Test("getOrDefault returns value on success")
+    func getOrDefaultSuccess() {
+        let result: StrataResult<Int> = .success(42)
+
+        #expect(result.getOrDefault(0) == 42)
+    }
+
+    @Test("getOrDefault returns default on failure")
+    func getOrDefaultFailure() {
+        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+
+        #expect(result.getOrDefault(0) == 0)
+    }
+
+    @Test("getOrElse returns value on success")
+    func getOrElseSuccess() {
+        let result: StrataResult<Int> = .success(42)
+
+        #expect(result.getOrElse { _ in -1 } == 42)
+    }
+
+    @Test("getOrElse returns transform result on failure")
+    func getOrElseFailure() {
+        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+
+        #expect(result.getOrElse { _ in -1 } == -1)
+    }
+}
+
+// MARK: - Concurrency Helper Tests
+
+@Suite("Concurrency Helpers")
+struct ConcurrencyHelperTests {
+
+    @Test("strataLaunch executes work and reduces on main")
+    @MainActor
+    func strataLaunchBasic() async {
+        var reduced: String?
+        let expectation = AsyncStream<Void>.makeStream()
+
+        strataLaunch(
+            work: { "hello" },
+            reduce: { value in
+                reduced = value
+                expectation.continuation.yield()
+                expectation.continuation.finish()
+            }
+        )
+
+        for await _ in expectation.stream { break }
+
+        #expect(reduced == "hello")
+    }
+
+    @Test("strataLaunchWithResult wraps success")
+    func strataLaunchWithResultSuccess() async {
+        let task = strataLaunchWithResult { 42 }
+
+        let result = await task.value
+
+        #expect(result.getOrNull() == 42)
+    }
+
+    @Test("strataLaunchWithResult wraps thrown error")
+    func strataLaunchWithResultFailure() async {
+        let task = strataLaunchWithResult {
+            throw TestException(message: "failed")
+            return 0 // unreachable, needed for type inference
+        }
+
+        let result = await task.value
+
+        #expect(result.getOrNull() == nil)
+        var message: String?
+        result.onFailure { message = $0.message }
+        #expect(message == "failed")
+    }
+
+    @Test("strataCollect delivers stream values")
+    @MainActor
+    func strataCollectBasic() async {
+        let (stream, continuation) = AsyncStream<Int>.makeStream()
+        var collected: [Int] = []
+        let done = AsyncStream<Void>.makeStream()
+
+        strataCollect(stream) { value in
+            collected.append(value)
+            if collected.count >= 3 {
+                done.continuation.yield()
+                done.continuation.finish()
+            }
+        }
+
+        continuation.yield(1)
+        continuation.yield(2)
+        continuation.yield(3)
+
+        for await _ in done.stream { break }
+
+        #expect(collected == [1, 2, 3])
     }
 }

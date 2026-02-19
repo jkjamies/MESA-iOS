@@ -35,9 +35,9 @@ open class StrataSubjectInteractor<P: Sendable, T: Sendable>: @unchecked Sendabl
     private let paramContinuation: AsyncStream<P>.Continuation
     private let paramStream: AsyncStream<P>
 
-    /// The latest value emitted by the stream (thread-safe).
+    /// The latest value emitted by the stream (thread-safe, read-only externally).
     private let _value = OSAllocatedUnfairLock<T?>(initialState: nil)
-    public var value: T? {
+    public private(set) var value: T? {
         get { _value.withLock { $0 } }
         set { _value.withLock { $0 = newValue } }
     }
@@ -63,18 +63,28 @@ open class StrataSubjectInteractor<P: Sendable, T: Sendable>: @unchecked Sendabl
     /// automatically cancelled when the stream's consumer stops iterating (via `onTermination`).
     /// Typically you should call this once and collect it with `strataCollect`.
     ///
+    /// When a new parameter arrives via ``callAsFunction(_:)``, the previous inner stream is
+    /// cancelled before starting the new one, preventing duplicate or stale emissions.
+    ///
     /// - Important: Calling this property multiple times creates independent streams and tasks.
     public var stream: AsyncStream<T> {
         AsyncStream { continuation in
             let task = Task { [weak self] in
                 guard let self = self else { return }
+                var innerTask: Task<Void, Never>?
                 for await param in self.paramStream {
-                    let outputStream = self.createObservable(params: param)
-                    for await output in outputStream {
-                        continuation.yield(output)
-                        self.value = output
+                    innerTask?.cancel()
+                    innerTask = Task { [weak self] in
+                        guard let self = self else { return }
+                        let outputStream = self.createObservable(params: param)
+                        for await output in outputStream {
+                            guard !Task.isCancelled else { break }
+                            continuation.yield(output)
+                            self.value = output
+                        }
                     }
                 }
+                innerTask?.cancel()
             }
             continuation.onTermination = { _ in
                 task.cancel()
