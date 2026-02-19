@@ -58,14 +58,19 @@ final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEven
         case .printValue:
             print("Trapezio Counter Value: \(state.value)")
         case .save:
-            strataLaunch {
-                let result = await self.saveUseCase.execute(params: self.state.value)
-                result.onSuccess { _ in
-                    print("Value saved successfully.")
-                }.onFailure { (error: any StrataException) in
-                    print("Failed to save: \(error.message)")
+            strataLaunch(
+                work: { await self.saveUseCase.execute(params: self.state.value) },
+                reduce: { result in
+                    self.update {
+                        $0.saveMessage = result.fold(
+                            onSuccess: { _ in "Value saved successfully." },
+                            onFailure: { error in "Failed to save: \(error.message)" }
+                        )
+                    }
                 }
-            }
+            )
+        case .dismissMessage:
+            update { $0.saveMessage = nil }
         case .back:
             navigator?.dismiss()
         }

@@ -62,10 +62,10 @@ final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEven
         case .decrement:
             update { $0.count -= 1 }
         case .divideByTwo:
-            strataLaunch {
-                let result = await self.divideUsecase.execute(value: self.state.count)
-                self.update { $0.count = result }
-            }
+            strataLaunch(
+                work: { await self.divideUsecase.execute(value: self.state.count) },
+                reduce: { result in self.update { $0.count = result } }
+            )
         case .goToSummary:
             navigator?.goTo(SummaryScreen(value: state.count))
         case .requestHelp:

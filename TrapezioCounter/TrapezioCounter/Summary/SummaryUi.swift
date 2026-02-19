@@ -41,6 +41,21 @@ struct SummaryUI: TrapezioUI {
                     .foregroundColor(.secondary)
             }
             
+            if let message = state.saveMessage {
+                VStack(spacing: 8) {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .accessibilityIdentifier("saveMessageLabel")
+                    Button("Dismiss") {
+                        onEvent(.dismissMessage)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("dismissMessageButton")
+                }
+            }
+
             if state.isLoading {
                 ProgressView()
                     .progressViewStyle(.circular)
@@ -52,7 +67,6 @@ struct SummaryUI: TrapezioUI {
                 .accessibilityIdentifier("saveButton")
                 .buttonStyle(.borderedProminent)
             }
-            
 
             HStack(spacing: 16) {
                 Button("Back") {

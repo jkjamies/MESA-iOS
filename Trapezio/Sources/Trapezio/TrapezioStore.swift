@@ -42,7 +42,9 @@ import Observation
 @Observable
 open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent>: Identifiable {
     public let screen: S
-    public private(set) var state: State
+    /// Current state snapshot. Readable from any isolation context (value-type copy).
+    /// Writes are restricted to ``update(_:)`` on the `@MainActor`.
+    nonisolated(unsafe) public private(set) var state: State
 
     /// Creates a store with its associated screen and initial state.
     ///

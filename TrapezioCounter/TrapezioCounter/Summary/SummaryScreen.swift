@@ -25,10 +25,12 @@ struct SummaryState: TrapezioState {
     var value: Int
     var lastSavedValue: Int? = nil
     var isLoading: Bool = false
+    var saveMessage: String? = nil
 }
 
 enum SummaryEvent: TrapezioEvent {
     case printValue
     case save
     case back
+    case dismissMessage
 }

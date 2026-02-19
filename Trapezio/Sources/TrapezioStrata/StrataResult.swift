@@ -20,7 +20,7 @@ import Foundation
 
 /// A discriminated union that encapsulates a successful outcome with a value of type T
 /// or a failure with a StrataException.
-public enum StrataResult<T> {
+public enum StrataResult<T>: Sendable where T: Sendable {
     case success(T)
     case failure(any StrataException)
     
