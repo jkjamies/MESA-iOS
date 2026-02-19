@@ -46,4 +46,36 @@ public enum StrataResult<T> {
         }
         return self
     }
+
+    /// Returns a new `StrataResult` with the encapsulated value transformed by `transform`
+    /// if this instance represents success, or the original failure unchanged.
+    public func map<R>(_ transform: (T) -> R) -> StrataResult<R> {
+        switch self {
+        case .success(let data): return .success(transform(data))
+        case .failure(let error): return .failure(error)
+        }
+    }
+
+    /// Returns the result of `onSuccess` for the encapsulated value if success,
+    /// or the result of `onFailure` for the encapsulated error if failure.
+    public func fold<R>(onSuccess: (T) -> R, onFailure: (any StrataException) -> R) -> R {
+        switch self {
+        case .success(let data): return onSuccess(data)
+        case .failure(let error): return onFailure(error)
+        }
+    }
+
+    /// Returns the encapsulated value if success, or `default` if failure.
+    public func getOrDefault(_ default: T) -> T {
+        getOrNull() ?? `default`
+    }
+
+    /// Returns the encapsulated value if success, or the result of `transform`
+    /// applied to the `StrataException` if failure.
+    public func getOrElse(_ transform: (any StrataException) -> T) -> T {
+        switch self {
+        case .success(let data): return data
+        case .failure(let error): return transform(error)
+        }
+    }
 }

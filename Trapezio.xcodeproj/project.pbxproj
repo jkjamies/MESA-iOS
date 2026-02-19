@@ -8,8 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		2D4544562F12F45C007AE19F /* Trapezio in Frameworks */ = {isa = PBXBuildFile; productRef = 2D4544552F12F45C007AE19F /* Trapezio */; };
-		2DB23A512F2E831100482FD0 /* TrapezioNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 2DB23A502F2E831100482FD0 /* TrapezioNavigation */; };
-		2DDD95742F32FB67008E11C0 /* TrapezioStrata in Frameworks */ = {isa = PBXBuildFile; productRef = 2DDD95732F32FB67008E11C0 /* TrapezioStrata */; };
+		2D8949042F3A28C900D50CED /* Trapezio in Frameworks */ = {isa = PBXBuildFile; productRef = 2D8949032F3A28C900D50CED /* Trapezio */; };
+		2D8949062F3A28C900D50CED /* TrapezioNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 2D8949052F3A28C900D50CED /* TrapezioNavigation */; };
+		2D8949082F3A28C900D50CED /* TrapezioStrata in Frameworks */ = {isa = PBXBuildFile; productRef = 2D8949072F3A28C900D50CED /* TrapezioStrata */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,9 +85,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2DB23A512F2E831100482FD0 /* TrapezioNavigation in Frameworks */,
-				2DDD95742F32FB67008E11C0 /* TrapezioStrata in Frameworks */,
+				2D8949042F3A28C900D50CED /* Trapezio in Frameworks */,
+				2D8949062F3A28C900D50CED /* TrapezioNavigation in Frameworks */,
 				2D4544562F12F45C007AE19F /* Trapezio in Frameworks */,
+				2D8949082F3A28C900D50CED /* TrapezioStrata in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,8 +156,9 @@
 			name = TrapezioCounter;
 			packageProductDependencies = (
 				2D4544552F12F45C007AE19F /* Trapezio */,
-				2DB23A502F2E831100482FD0 /* TrapezioNavigation */,
-				2DDD95732F32FB67008E11C0 /* TrapezioStrata */,
+				2D8949032F3A28C900D50CED /* Trapezio */,
+				2D8949052F3A28C900D50CED /* TrapezioNavigation */,
+				2D8949072F3A28C900D50CED /* TrapezioStrata */,
 			);
 			productName = TrapezioCounter;
 			productReference = 2D4544082F12F2C4007AE19F /* TrapezioCounter.app */;
@@ -236,7 +239,7 @@
 			mainGroup = 2D4543FF2F12F2C4007AE19F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				2D4544542F12F45C007AE19F /* XCLocalSwiftPackageReference "../Trapezio" */,
+				2D8949022F3A28C900D50CED /* XCLocalSwiftPackageReference "Trapezio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2D4544092F12F2C4007AE19F /* Products */;
@@ -619,9 +622,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		2D4544542F12F45C007AE19F /* XCLocalSwiftPackageReference "../Trapezio" */ = {
+		2D8949022F3A28C900D50CED /* XCLocalSwiftPackageReference "Trapezio" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Trapezio;
+			relativePath = Trapezio;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -630,14 +633,16 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = Trapezio;
 		};
-		2DB23A502F2E831100482FD0 /* TrapezioNavigation */ = {
+		2D8949032F3A28C900D50CED /* Trapezio */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 2D4544542F12F45C007AE19F /* XCLocalSwiftPackageReference "../Trapezio" */;
+			productName = Trapezio;
+		};
+		2D8949052F3A28C900D50CED /* TrapezioNavigation */ = {
+			isa = XCSwiftPackageProductDependency;
 			productName = TrapezioNavigation;
 		};
-		2DDD95732F32FB67008E11C0 /* TrapezioStrata */ = {
+		2D8949072F3A28C900D50CED /* TrapezioStrata */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 2D4544542F12F45C007AE19F /* XCLocalSwiftPackageReference "../Trapezio" */;
 			productName = TrapezioStrata;
 		};
 /* End XCSwiftPackageProductDependency section */

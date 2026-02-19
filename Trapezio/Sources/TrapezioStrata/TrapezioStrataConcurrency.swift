@@ -27,6 +27,19 @@ public func strataLaunch(
     }
 }
 
+/// Helper to launch a Task off the main thread, wrapping the result in `StrataResult`.
+/// The operation closure may throw — errors are caught and returned as `.failure`.
+/// Returns a `Task` whose `.value` can be awaited from any context.
+@discardableResult
+public func strataLaunchWithResult<T: Sendable>(
+    priority: TaskPriority? = nil,
+    operation: @escaping @Sendable () async throws -> T
+) -> Task<StrataResult<T>, Never> {
+    Task.detached(priority: priority) {
+        await strataRunCatching { try await operation() }
+    }
+}
+
 /// Helper to collect an AsyncStream on the MainActor.
 /// Matches `strataLaunch` paradigm for stream observation.
 @discardableResult
