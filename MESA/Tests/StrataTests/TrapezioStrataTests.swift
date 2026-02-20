@@ -255,20 +255,21 @@ struct StrataSubjectInteractorTests {
     @Test("emits values from createObservable")
     func basicEmission() async {
         let interactor = SimpleSubjectInteractor()
-        var collected: [String] = []
 
-        let task = Task {
+        let task = Task { () -> [String] in
+            var collected: [String] = []
             for await value in interactor.stream {
                 collected.append(value)
                 if collected.count >= 1 { break }
             }
+            return collected
         }
 
         // Small delay to let stream setup
         try? await Task.sleep(nanoseconds: 10_000_000)
         interactor(42)
 
-        await task.value
+        let collected = await task.value
 
         #expect(collected == ["value:42"])
     }
@@ -276,19 +277,20 @@ struct StrataSubjectInteractorTests {
     @Test("emits multiple values per trigger")
     func multipleEmissions() async {
         let interactor = ContinuousSubjectInteractor()
-        var collected: [Int] = []
 
-        let task = Task {
+        let task = Task { () -> [Int] in
+            var collected: [Int] = []
             for await value in interactor.stream {
                 collected.append(value)
                 if collected.count >= 3 { break }
             }
+            return collected
         }
 
         try? await Task.sleep(nanoseconds: 10_000_000)
         interactor(1)
 
-        await task.value
+        let collected = await task.value
 
         #expect(collected == [10, 11, 12])
     }
@@ -334,13 +336,14 @@ struct StrataSubjectInteractorTests {
         }
 
         let interactor = SlowSubjectInteractor()
-        var collected: [Int] = []
 
-        let task = Task {
+        let task = Task { () -> [Int] in
+            var collected: [Int] = []
             for await value in interactor.stream {
                 collected.append(value)
                 if collected.count >= 4 { break }
             }
+            return collected
         }
 
         try? await Task.sleep(nanoseconds: 10_000_000)
@@ -350,7 +353,7 @@ struct StrataSubjectInteractorTests {
         try? await Task.sleep(nanoseconds: 30_000_000)
         interactor(2) // Should cancel first, start emitting 200, 201, 202...
 
-        await task.value
+        let collected = await task.value
 
         // The last values should be from the second trigger (params=2)
         let lastValue = collected.last!
