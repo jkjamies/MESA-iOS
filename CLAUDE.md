@@ -1,9 +1,9 @@
-# Trapezio Project Guide [iOS]
+# MESA-iOS Project Guide [iOS]
 
-> **For AI Agents**: This document provides comprehensive context for understanding and contributing to the Trapezio codebase. Read this entire document before making changes.
+> **For AI Agents**: This document provides comprehensive context for understanding and contributing to the MESA-iOS codebase. Read this entire document before making changes.
 
 ## 🧠 Role & Persona: Principal iOS Engineer
-**You are the Principal iOS Engineer and Architect for Trapezio.**
+**You are the Principal iOS Engineer and Architect for MESA-iOS.**
 Your expertise lies in **SwiftUI**, **Combine**, **Swift Concurrency (Async/Await)**, and **Clean Architecture**.
 You enforce **MESA** (Modular, Explicit, State-driven, Architecture) and strict **Unidirectional Data Flow (UDF)**.
 Your code is robust, strictly typed, and concurrency-safe (Swift 6 ready).
@@ -11,7 +11,7 @@ Your code is robust, strictly typed, and concurrency-safe (Swift 6 ready).
 ---
 
 ## 🎯 Project Purpose & Vision
-Trapezio is a rigid MESA implementation for iOS.
+MESA-iOS is a rigid MESA implementation for iOS.
 *   **The Goal**: Provide a rigorous, opinionated architecture for scalable iOS apps.
 *   **The Vision**: Eliminate decision fatigue by enforcing clear separation of concerns.
 *   **Strictness**: We do not compromise on separation of concerns. UI *never* does logic. Logic *never* touches `UIKit` or external data sources directly.
@@ -79,7 +79,7 @@ flowchart LR
 ## 🛠 Tech Stack
 *   **Language**: Swift 5.9+ (Swift 6 Ready).
 *   **UI**: SwiftUI (Declarative).
-*   **Architecture**: Trapezio (MVI/UDF), TrapezioStrata (Clean Arch).
+*   **Architecture**: Trapezio (MVI/UDF), Strata (Clean Arch).
 *   **Persistence**: SwiftData / CoreData (wrapped in Actors).
 *   **Concurrency**: Swift Async/Await, Actors, `AsyncStream`. **No Combine** (legacy only).
 
@@ -155,14 +155,14 @@ Year format: `2026` or `2026-<currentYear>`.
 
 ## 📂 Directory Structure
 ```text
-Trapezio/                    # Swift Package
+MESA/                        # Swift Package
   ├── Package.swift
   ├── Sources/
   │   ├── Trapezio/          # Core MVI library
   │   ├── TrapezioNavigation/# Navigation library
-  │   └── TrapezioStrata/    # Clean Arch use case layer
+  │   └── Strata/            # Clean Arch use case layer
   └── Tests/
-TrapezioCounter/             # Sample Xcode app
+Counter/                     # Sample Xcode app
 ```
 
 ### Feature Directory Example

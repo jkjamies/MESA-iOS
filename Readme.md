@@ -1,6 +1,6 @@
-# Trapezio Framework
+# MESA-iOS
 
-**iOS Implementation of the MESA Framework (Modular, Explicit, State-driven, Architecture)**
+**MESA-iOS — Trapezio is the iOS implementation of the MESA Framework (Modular, Explicit, State-driven, Architecture)**
 
 Trapezio is a production-grade architectural library for SwiftUI, designed to enforce unidirectional data flow (UDF), strictly typed navigation, and a clean separation of concerns.
 
@@ -41,7 +41,46 @@ flowchart LR
 |:---|:---|:---|
 | **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioContainer`, `TrapezioInterop`, `TrapezioMessage` |
 | **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost` |
-| **TrapezioStrata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
+| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
+
+---
+
+## 📦 Installation
+
+### Swift Package Manager
+
+Add MESA-iOS to your project via SPM:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/jkjamies/MESA-iOS.git", from: "0.1.0")
+]
+```
+
+Then add the libraries you need to your target:
+
+```swift
+.target(
+    name: "YourApp",
+    dependencies: [
+        .product(name: "Trapezio", package: "MESA-iOS"),
+        .product(name: "TrapezioNavigation", package: "MESA-iOS"),
+        .product(name: "Strata", package: "MESA-iOS"),
+    ]
+)
+```
+
+### XCFramework
+
+Pre-built XCFrameworks for each library are attached to every [GitHub Release](https://github.com/jkjamies/MESA-iOS/releases):
+
+| Artifact | Contents |
+|:---|:---|
+| `Trapezio.xcframework.zip` | Core MVI/UDF primitives |
+| `TrapezioNavigation.xcframework.zip` | Type-safe navigation |
+| `Strata.xcframework.zip` | Clean Architecture use cases & concurrency helpers |
+
+Download the `.xcframework.zip` for the libraries you need and add them to your Xcode project under **Frameworks, Libraries, and Embedded Content**.
 
 ---
 

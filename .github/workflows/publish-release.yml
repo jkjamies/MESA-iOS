@@ -1,0 +1,80 @@
+name: Publish Release
+
+on:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-xcframeworks:
+    name: Build XCFrameworks
+    runs-on: macos-26
+    strategy:
+      matrix:
+        scheme: [ Trapezio, TrapezioNavigation, Strata ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build XCFramework
+        run: |
+          SCHEME="${{ matrix.scheme }}"
+          ARCHIVE_DIR="$(pwd)/archives"
+          OUTPUT_DIR="$(pwd)/output"
+          mkdir -p "$ARCHIVE_DIR" "$OUTPUT_DIR"
+
+          # Archive for iOS device
+          xcodebuild archive \
+            -workspace MESA/Package.swift \
+            -scheme "$SCHEME" \
+            -destination "generic/platform=iOS" \
+            -archivePath "$ARCHIVE_DIR/${SCHEME}-iOS" \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            -quiet
+
+          # Archive for iOS Simulator
+          xcodebuild archive \
+            -workspace MESA/Package.swift \
+            -scheme "$SCHEME" \
+            -destination "generic/platform=iOS Simulator" \
+            -archivePath "$ARCHIVE_DIR/${SCHEME}-iOS-Simulator" \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            -quiet
+
+          # Create XCFramework
+          xcodebuild -create-xcframework \
+            -framework "$ARCHIVE_DIR/${SCHEME}-iOS.xcarchive/Products/Library/Frameworks/${SCHEME}.framework" \
+            -framework "$ARCHIVE_DIR/${SCHEME}-iOS-Simulator.xcarchive/Products/Library/Frameworks/${SCHEME}.framework" \
+            -output "$OUTPUT_DIR/${SCHEME}.xcframework"
+
+          # Zip the XCFramework
+          cd "$OUTPUT_DIR"
+          zip -r "${SCHEME}.xcframework.zip" "${SCHEME}.xcframework"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.scheme }}-xcframework
+          path: output/${{ matrix.scheme }}.xcframework.zip
+
+  attach-to-release:
+    name: Attach Artifacts to Release
+    needs: build-xcframeworks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          for zip in artifacts/*/*.xcframework.zip; do
+            gh release upload "$TAG" "$zip" --repo "${{ github.repository }}"
+          done
