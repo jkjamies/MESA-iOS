@@ -39,9 +39,9 @@ flowchart LR
 
 | Module | Purpose | Key Components |
 |:---|:---|:---|
-| **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioInterop` |
+| **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioContainer`, `TrapezioInterop`, `TrapezioMessage` |
 | **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost` |
-| **TrapezioStrata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `strataLaunch`, `strataCollect` |
+| **TrapezioStrata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
 
 ---
 
@@ -51,14 +51,14 @@ Trapezio strictly enforces **Clean Architecture** combined with **MVI** for the 
 
 ### 1. Presentation Layer (`:presentation`)
 -   **Role**: Manages UI state and handles user interaction.
--   **Components**: `TrapezioStore`, `TrapezioUI`, `TrapezioScreen`.
+-   **Components**: `TrapezioStore`, `TrapezioUI`, `TrapezioScreen`, `TrapezioContainer`, `TrapezioRuntime`, `TrapezioMessage`/`TrapezioMessageManager`.
 -   **Threading**: Strictly **Main Actor**.
 -   **Dependencies**: Depends on **Domain**. NEVER depends on Data.
 
 ### 2. Domain Layer (`:domain`)
 -   **Role**: Pure business logic.
 -   **Components**:
-    -   **Use Cases** (`StrataInteractor`): Reusable business rules.
+    -   **Use Cases** (Open classes): `StrataInteractor<P, T>` (one-shot) and `StrataSubjectInteractor<P, T>` (stream-based).
     -   **Interfaces**: Repository protocols.
     -   **Models**: Pure data structures.
 -   **Threading**: **Actor Agnostic**. Must be safe to call from any thread.
@@ -98,7 +98,7 @@ graph LR
 ## 🚀 Usage Guide
 
 ### 1. The Screen (Identity)
-The `TrapezioScreen` is a `Hashable` struct acting as the route and configuration for a feature.
+The `TrapezioScreen` is a `Hashable & Codable` struct acting as the route and configuration for a feature.
 ```swift
 struct CounterScreen: TrapezioScreen {
     let initialValue: Int
@@ -109,35 +109,49 @@ struct CounterScreen: TrapezioScreen {
 The `TrapezioStore` manages state. It injects **Use Cases** to perform work.
 ```swift
 @MainActor
-final class CounterStore: TrapezioStore<CounterScreen, CounterState, CounterEvent> {
-    private let incrementUseCase: IncrementUseCase
-    
-    // Dependency Injection via Init
-    init(screen: CounterScreen, incrementUseCase: IncrementUseCase) {
-        self.incrementUseCase = incrementUseCase
-        super.init(screen: screen, initialState: CounterState(count: screen.initialValue))
+final class SummaryStore: TrapezioStore<SummaryScreen, SummaryState, SummaryEvent> {
+    private let saveUseCase: SaveLastValueUseCase
+
+    init(screen: SummaryScreen, saveUseCase: SaveLastValueUseCase) {
+        self.saveUseCase = saveUseCase
+        super.init(screen: screen, initialState: SummaryState(value: screen.value))
     }
 
-    override func handle(event: CounterEvent) {
+    override func handle(event: SummaryEvent) {
         switch event {
-        case .increment:
-            // Launch async work on MainActor (explicit capture required)
-            strataLaunch {
-                let newCount = await self.incrementUseCase.execute(current: self.state.count)
-                self.update { $0.count = newCount }
-            }
+        case .save:
+            // Work runs detached (off main), reduce runs on @MainActor
+            strataLaunch(
+                work: { await self.saveUseCase.execute(params: self.state.value) },
+                reduce: { result in
+                    self.update {
+                        $0.saveMessage = result.fold(
+                            onSuccess: { _ in "Saved." },
+                            onFailure: { error in "Failed: \(error.message)" }
+                        )
+                    }
+                }
+            )
         }
     }
 }
 ```
 
 ### 3. The Use Case (Domain Logic)
-Use Cases encapsulate specific business rules. They conform to `StrataInteractor` (one-shot) or `StrataSubjectInteractor` (stream).
+Use Cases encapsulate specific business rules. Subclass `StrataInteractor<P, T>` (one-shot) or `StrataSubjectInteractor<P, T>` (stream).
 ```swift
-// Protocol-oriented Interactor
-final class IncrementUseCase: StrataInteractor {
-    func execute(params: Int) async -> StrataResult<Int> {
-        return .success(params + 1)
+final class SaveLastValueUseCase: StrataInteractor<Int, Void> {
+    private let repository: SummaryRepository
+
+    init(repository: SummaryRepository) {
+        self.repository = repository
+        super.init()
+    }
+
+    override func doWork(params: Int) async -> StrataResult<Void> {
+        return await executeCatching(params: params) { val in
+            try await repository.saveValue(val)
+        }
     }
 }
 ```
@@ -155,6 +169,40 @@ struct CounterUI: TrapezioUI {
 }
 ```
 
+### 5. The Factory (Composition Root)
+`TrapezioContainer` preserves store identity across SwiftUI view updates. Factories assemble the dependency graph.
+```swift
+struct CounterFactory {
+    @ViewBuilder @MainActor
+    static func make(screen: CounterScreen, navigator: (any TrapezioNavigator)?, interop: (any TrapezioInterop)?) -> some View {
+        TrapezioContainer(
+            makeStore: CounterStore(screen: screen, divideUsecase: DivideUsecase(), navigator: navigator, interop: interop),
+            ui: CounterUI()
+        )
+    }
+}
+```
+
+### Key Protocols
+
+| Protocol | Conforms To | Purpose |
+|:---|:---|:---|
+| `TrapezioScreen` | `Hashable`, `Codable` | Route identity and parameters |
+| `TrapezioState` | `Equatable` | Immutable display data. `Equatable` enables `update()` to skip redundant publishes |
+| `TrapezioEvent` | — | Marker protocol for user intents (no requirements) |
+| `TrapezioUI` | — | Stateless `map(state:onEvent:) -> some View` |
+
+### TrapezioStore Internals
+
+- `@MainActor @Observable open class TrapezioStore<S, State, Event>`
+- `state` is `nonisolated(unsafe) public private(set)` — enables cross-isolation reads from detached tasks while writes are restricted to `update()` on the main actor
+- `update(_ transform:)` — copy-on-write mutation with `Equatable` check to prevent unnecessary SwiftUI re-renders
+- `render(with: ui)` — binds the store to a `TrapezioUI` and returns a `TrapezioRuntime` view
+
+### TrapezioMessage
+
+`TrapezioMessageManager` provides transient user-facing messages (snackbars, alerts). Emit via `emit(_:)`, observe via `messagesSequence` (`AsyncStream<[TrapezioMessage]>`), clear via `clearMessage(id:)` or `clearAll()`.
+
 ---
 
 ## 🧵 Threading & Concurrency Model
@@ -164,13 +212,45 @@ Trapezio enforces a robust threading model to prevent UI jank and race condition
 | Component | Thread / Actor | Rule |
 |:---|:---|:---|
 | **UI** | `@MainActor` | All rendering code must be on Main. |
-| **Store** | `@MainActor` | State updates happen on Main. |
-| **Use Case** | `nonisolated` | Logic manages its own hopping or is pure. |
+| **Store** | `@MainActor` | State updates and `reduce` closures happen on Main. |
+| **Use Case** | Actor-agnostic | Plain classes — they don't dictate threading. |
 | **Repository** | `actor` | Database/Network I/O is forced to background. |
+
+### Concurrency Primitives
+
+All primitives use `Task.detached` to guarantee work runs off the main thread:
+
+| Function | Work Thread | Result Thread | Returns |
+|:---|:---|:---|:---|
+| `strataLaunch(work:reduce:)` | Detached (cooperative pool) | `@MainActor` via `reduce` | `Task<Void, Never>` |
+| `strataLaunchWithResult(operation:)` | Detached (cooperative pool) | Caller awaits `.value` | `Task<StrataResult<T>, Never>` |
+| `strataCollect(stream, action:)` | Detached (cooperative pool) | `@MainActor` via `action` per emission | `Task<Void, Never>` |
+| `strataRunCatching { }` | Inherits caller context | Same | `StrataResult<T>` |
+
+All return `@discardableResult` — ignore for fire-and-forget, or store the `Task` handle for cancellation.
+
+### StrataResult Operations
+
+| Method | Description |
+|:---|:---|
+| `.onSuccess { }` | Executes closure on success, returns self (chainable) |
+| `.onFailure { }` | Executes closure on failure, returns self (chainable) |
+| `.map { }` | Transforms success value, preserves failure |
+| `.fold(onSuccess:onFailure:)` | Exhaustive match returning a single value |
+| `.getOrNull()` | Returns value or nil |
+| `.getOrDefault(_:)` | Returns value or provided default |
+| `.getOrElse { }` | Returns value or result of transform on error |
+
+### StrataInteractor
+
+`StrataInteractor<P, T>` provides built-in `inProgress` state (thread-safe via `OSAllocatedUnfairLock`) and an `inProgressStream` (`AsyncStream<Bool>`, single-consumer) for binding loading indicators. `executeCatching(params:block:)` bridges throwing code to `StrataResult`.
+
+### StrataSubjectInteractor
+
+`StrataSubjectInteractor<P, T>` is triggered via `callAsFunction(_:)` and consumed via the `.stream` property. Re-triggering automatically cancels the previous inner stream. The `value` property caches the latest emission (thread-safe, read-only externally).
 
 **Example: Persistence Actor**
 ```swift
-@available(iOS 17, *)
 public actor SummaryRepositoryImpl: SummaryRepository, ModelActor {
     // ModelActor ensures independent ModelContext on a background thread
     ...
@@ -184,15 +264,30 @@ public actor SummaryRepositoryImpl: SummaryRepository, ModelActor {
 Use `TrapezioNavigationHost` to drive navigation. The **Factory** pattern is used to assemble features (Composition Root).
 
 ```swift
-TrapezioNavigationHost(root: HomeScreen()) { screen, navigator, interop in
+TrapezioNavigationHost(root: CounterScreen(initialValue: 0)) { screen, navigator, interop in
     switch screen {
     case let counter as CounterScreen:
-        // Factory assembles dependencies
-        CounterFactory.make(screen: counter, navigator: navigator)
-    ...
+        CounterFactory.make(screen: counter, navigator: navigator, interop: interop)
+    case let summary as SummaryScreen:
+        SummaryFactory.make(screen: summary, navigator: navigator)
+    default:
+        EmptyView()
     }
 }
 ```
+
+### TrapezioNavigator API
+
+| Method | Description |
+|:---|:---|
+| `goTo(_ screen:)` | Push a screen onto the navigation stack |
+| `dismiss()` | Pop the current screen |
+| `dismissToRoot()` | Pop to the root of the stack |
+| `dismissTo(_ screen:)` | Pop back to a specific screen |
+
+### TrapezioInterop
+
+Features communicate with the app shell via `TrapezioInterop.send(_ event:)`. Use `ClosureTrapezioInterop` for closure-based handling at the `TrapezioNavigationHost` level via `onInterop`.
 
 ---
 

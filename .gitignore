@@ -20,7 +20,3 @@ Package.resolved
 *.swp
 *.lock
 
-# --- Local AI assistant configs (keep local; do not commit) ---
-CLAUDE.md
-.github/copilot-instructions.md
-.junie/guidelines.md
