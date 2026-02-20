@@ -1,0 +1,84 @@
+/*
+ * Copyright 2026 Jason Jamieson
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import XCTest
+import Trapezio
+import TrapezioNavigation
+@testable import Counter
+
+@MainActor
+final class CounterStoreTests: XCTestCase {
+    
+    var store: CounterStore!
+    var interop: FakeInterop!
+    
+    override func setUp() {
+        super.setUp()
+        
+        // 2. Manual Injection: We provide the fake directly.
+        // This is where we "simulate" a DI override.
+        let screen = CounterScreen(initialValue: 10)
+        let fakeUsecase = FakeDivideUsecase()
+        interop = FakeInterop()
+        
+        store = CounterStore(
+            screen: screen,
+            divideUsecase: fakeUsecase,
+            navigator: nil,
+            interop: interop
+        )
+    }
+
+    func test_increment_increasesCount() {
+        store.handle(event: .increment)
+        XCTAssertEqual(store.state.count, 11)
+    }
+
+    func test_decrement_decreasesCount() {
+        store.handle(event: .decrement)
+        XCTAssertEqual(store.state.count, 9)
+    }
+
+    func test_goToSummary_withNilNavigator_doesNotMutateState() {
+        let initialCount = store.state.count
+        store.handle(event: .goToSummary)
+        XCTAssertEqual(store.state.count, initialCount)
+    }
+
+    func test_divideByTwo_isInstantAndDeterministic() async {
+        store.handle(event: .divideByTwo)
+        // No more long sleep!
+        // Use yield to let the Store's Task { } block start and finish.
+        await Task.yield()
+        XCTAssertEqual(store.state.count, 5, "The count should be divided by 2 instantly using the fake.")
+    }
+    
+    func test_requestHelp_sendsInteropEvent() {
+        store.handle(event: .requestHelp)
+        
+        XCTAssertEqual(interop.sentEvents.count, 1)
+        guard let event = interop.sentEvents.first as? AppInterop else {
+            XCTFail("Event was not AppInterop")
+            return
+        }
+        
+        if case .showAlert(let message) = event {
+            XCTAssertEqual(message, "This is a simple counter. Press +/- to change value.")
+        } else {
+            XCTFail("Wrong event type")
+        }
+    }
+}

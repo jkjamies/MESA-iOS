@@ -70,7 +70,7 @@ flowchart LR
         Event --> Store["🧠 Store<br/>(Logic)"]
         State --> View
     end
-
+    
     Store -->|UseCase| Logic["⚙️ Logic"]
 ```
 
@@ -187,16 +187,16 @@ graph LR
     Screen --> UI_View[View]
     UI_View --> Store
     end
-
+    
     subgraph Domain
     UseCase --> Repo[Repository Protocol]
     end
-
+    
     subgraph Data
     RepoImpl[Repository Impl] -.->|Implements| Repo
     RepoImpl --> SwiftData
     end
-
+    
     Store --> UseCase
 ```
 

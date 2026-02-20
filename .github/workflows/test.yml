@@ -1,4 +1,4 @@
-name: Trapezio CI
+name: MESA-iOS CI
 
 on:
   pull_request:
@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run Package Tests
         run: swift test --parallel
+        working-directory: MESA
 
   test-app:
     name: iOS App (Sample)
@@ -28,6 +29,6 @@ jobs:
       - name: Run App Tests
         run: |
           xcodebuild test \
-            -scheme TrapezioCounter \
+            -scheme Counter \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' \
             -quiet
