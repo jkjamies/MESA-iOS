@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build XCFramework
+        working-directory: MESA
         run: |
           SCHEME="${{ matrix.scheme }}"
           ARCHIVE_DIR="$(pwd)/archives"
@@ -26,7 +27,6 @@ jobs:
 
           # Archive for iOS device
           xcodebuild archive \
-            -package-path MESA \
             -scheme "$SCHEME" \
             -destination "generic/platform=iOS" \
             -archivePath "$ARCHIVE_DIR/${SCHEME}-iOS" \
@@ -36,7 +36,6 @@ jobs:
 
           # Archive for iOS Simulator
           xcodebuild archive \
-            -package-path MESA \
             -scheme "$SCHEME" \
             -destination "generic/platform=iOS Simulator" \
             -archivePath "$ARCHIVE_DIR/${SCHEME}-iOS-Simulator" \
@@ -58,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.scheme }}-xcframework
-          path: output/${{ matrix.scheme }}.xcframework.zip
+          path: MESA/output/${{ matrix.scheme }}.xcframework.zip
 
   attach-to-release:
     name: Attach Artifacts to Release
