@@ -58,11 +58,11 @@ final class CounterStoreTests: XCTestCase {
         XCTAssertEqual(store.state.count, initialCount)
     }
 
-    func test_divideByTwo_isInstantAndDeterministic() async {
+    func test_divideByTwo_isInstantAndDeterministic() async throws {
         store.handle(event: .divideByTwo)
-        // No more long sleep!
-        // Use yield to let the Store's Task { } block start and finish.
-        await Task.yield()
+        // strataLaunch uses Task.detached, so we need to wait for both the
+        // detached work and the MainActor.run { reduce } hop to complete.
+        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
         XCTAssertEqual(store.state.count, 5, "The count should be divided by 2 instantly using the fake.")
     }
     
