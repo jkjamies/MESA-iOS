@@ -67,6 +67,45 @@ public func strataLaunch<T: Sendable>(
     }
 }
 
+/// Legacy/migration interop — launches throwing work off the main thread with `@MainActor` reduce and catch.
+///
+/// `work` runs in a detached task on the cooperative thread pool — completely off the main thread.
+/// On success, `reduce` is called on the `@MainActor` with the result value.
+/// On failure, `catch` is called on the `@MainActor` with the plain `Error`.
+/// No MESA types (`StrataResult`, `StrataException`) are required — use `strataLaunch` with interactors
+/// for new code that has fully adopted Strata.
+///
+/// ```swift
+/// // Fire-and-forget with error handling (reduce omitted)
+/// strataLaunchInterop(
+///     work: { try await legacyService.sync() },
+///     catch: { error in update { $0.error = error.localizedDescription } }
+/// )
+///
+/// // With result
+/// strataLaunchInterop(
+///     work: { try await legacyAPI.fetchItems() },
+///     reduce: { items in update { $0.items = items } },
+///     catch: { error in update { $0.error = error.localizedDescription } }
+/// )
+/// ```
+@discardableResult
+public func strataLaunchInterop<T: Sendable>(
+    priority: TaskPriority? = nil,
+    work: @escaping @Sendable () async throws -> T,
+    reduce: @escaping @MainActor @Sendable (T) -> Void = { _ in },
+    catch: @escaping @MainActor @Sendable (Error) -> Void
+) -> Task<Void, Never> {
+    Task.detached(priority: priority) {
+        do {
+            let result = try await work()
+            await MainActor.run { reduce(result) }
+        } catch {
+            await MainActor.run { `catch`(error) }
+        }
+    }
+}
+
 /// Launches work off the main thread, wrapping the result in `StrataResult`.
 ///
 /// Returns a `Task` handle for deferred awaiting, parallel execution, or cancellation.

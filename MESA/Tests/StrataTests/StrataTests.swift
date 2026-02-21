@@ -483,6 +483,68 @@ struct ConcurrencyHelperTests {
         #expect(message == "failed")
     }
 
+    @Test("strataLaunchInterop delivers success to reduce on main")
+    @MainActor
+    func strataLaunchInteropSuccess() async {
+        var reduced: String?
+        let expectation = AsyncStream<Void>.makeStream()
+
+        strataLaunchInterop(
+            work: { "interop-value" },
+            reduce: { value in
+                reduced = value
+                expectation.continuation.yield()
+                expectation.continuation.finish()
+            },
+            catch: { _ in }
+        )
+
+        for await _ in expectation.stream { break }
+
+        #expect(reduced == "interop-value")
+    }
+
+    @Test("strataLaunchInterop delivers error to catch on main")
+    @MainActor
+    func strataLaunchInteropFailure() async {
+        var caught: String?
+        let expectation = AsyncStream<Void>.makeStream()
+
+        strataLaunchInterop(
+            work: { throw TestException(message: "interop-error") },
+            reduce: { (_: Int) in },
+            catch: { error in
+                caught = (error as? TestException)?.message
+                expectation.continuation.yield()
+                expectation.continuation.finish()
+            }
+        )
+
+        for await _ in expectation.stream { break }
+
+        #expect(caught == "interop-error")
+    }
+
+    @Test("strataLaunchInterop void work with default reduce")
+    @MainActor
+    func strataLaunchInteropVoidWork() async {
+        var caught: String?
+        let expectation = AsyncStream<Void>.makeStream()
+
+        strataLaunchInterop(
+            work: { throw TestException(message: "void-error") },
+            catch: { error in
+                caught = (error as? TestException)?.message
+                expectation.continuation.yield()
+                expectation.continuation.finish()
+            }
+        )
+
+        for await _ in expectation.stream { break }
+
+        #expect(caught == "void-error")
+    }
+
     @Test("strataCollect delivers stream values")
     @MainActor
     func strataCollectBasic() async {
