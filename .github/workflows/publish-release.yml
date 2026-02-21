@@ -26,7 +26,7 @@ jobs:
 
           # Archive for iOS device
           xcodebuild archive \
-            -workspace MESA/Package.swift \
+            -package-path MESA \
             -scheme "$SCHEME" \
             -destination "generic/platform=iOS" \
             -archivePath "$ARCHIVE_DIR/${SCHEME}-iOS" \
@@ -36,7 +36,7 @@ jobs:
 
           # Archive for iOS Simulator
           xcodebuild archive \
-            -workspace MESA/Package.swift \
+            -package-path MESA \
             -scheme "$SCHEME" \
             -destination "generic/platform=iOS Simulator" \
             -archivePath "$ARCHIVE_DIR/${SCHEME}-iOS-Simulator" \
