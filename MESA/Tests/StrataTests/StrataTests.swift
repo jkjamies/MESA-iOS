@@ -545,6 +545,26 @@ struct ConcurrencyHelperTests {
         #expect(caught == "void-error")
     }
 
+    @Test("strataLaunchMain executes work and reduces on main actor")
+    @MainActor
+    func strataLaunchMainBasic() async {
+        var reduced: String?
+        let expectation = AsyncStream<Void>.makeStream()
+
+        strataLaunchMain(
+            work: { "main-hello" },
+            reduce: { value in
+                reduced = value
+                expectation.continuation.yield()
+                expectation.continuation.finish()
+            }
+        )
+
+        for await _ in expectation.stream { break }
+
+        #expect(reduced == "main-hello")
+    }
+
     @Test("strataCollect delivers stream values")
     @MainActor
     func strataCollectBasic() async {
