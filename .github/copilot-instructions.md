@@ -58,6 +58,7 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
     *   `strataLaunch(work:reduce:)`: Detached work + `@MainActor` reduce. Returns `Task` handle for cancellation.
     *   `strataLaunchWithResult(operation:)`: Detached work wrapped in `StrataResult`. Returns `Task<StrataResult<T>, Never>`.
     *   `strataLaunchInterop(work:reduce:catch:)`: Legacy/migration interop — detached throwing work + `@MainActor` reduce/catch. No MESA types required. Use `strataLaunch` with interactors for new code.
+    *   `strataLaunchMain(work:reduce:)`: Main-thread work + `@MainActor` reduce. For use cases requiring `@MainActor`-isolated execution. Returns `Task` handle for cancellation.
 *   `strataCollect(stream, action:)`: Detached stream iteration + `@MainActor` action per value.
     *   `strataRunCatching { }`: Wraps async throwing block into `StrataResult`.
 
@@ -117,13 +118,14 @@ All features MUST implement these 5 components:
 *   **Bridge**: `Store` → `UseCase` (await) → `Repository` (await, actor forces background hop) → result returns to Store's `@MainActor` context.
 
 #### Concurrency Threading Model
-All concurrency primitives use `Task.detached` to guarantee work runs off the main thread:
+Most concurrency primitives use `Task.detached` to guarantee work runs off the main thread. The exception is `strataLaunchMain(work:reduce:)`, which uses `Task` on the `@MainActor` for use cases requiring main-thread execution:
 
 | Function | Work Thread | Result Thread | Returns |
 |----------|-------------|---------------|---------|
 | `strataLaunch(work:reduce:)` | Detached (cooperative pool) | `@MainActor` via `reduce` | `Task<Void, Never>` |
 | `strataLaunchWithResult(operation:)` | Detached (cooperative pool) | Caller awaits `.value` | `Task<StrataResult<T>, Never>` |
 | `strataLaunchInterop(work:reduce:catch:)` | Detached (cooperative pool) | `@MainActor` via `reduce`/`catch` | `Task<Void, Never>` |
+| `strataLaunchMain(work:reduce:)` | `@MainActor` | `@MainActor` via `reduce` | `Task<Void, Never>` |
 | `strataCollect(stream, action:)` | Detached (cooperative pool) | `@MainActor` via `action` per emission | `Task<Void, Never>` |
 | `strataRunCatching { }` | Inherits caller context | Same | `StrataResult<T>` |
 

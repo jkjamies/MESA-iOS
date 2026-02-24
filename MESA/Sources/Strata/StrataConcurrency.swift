@@ -150,3 +150,28 @@ public func strataCollect<T: Sendable>(
         }
     }
 }
+
+/// Launches work on the `@MainActor` for use cases that require main-thread execution.
+///
+/// Both `work` and `reduce` run on the `@MainActor`. Use this **only** when the work itself
+/// must execute on the main thread (e.g., reading `@MainActor`-isolated state or calling
+/// main-thread-only APIs). For all other cases, prefer `strataLaunch` which keeps work off
+/// the main thread.
+///
+/// ```swift
+/// strataLaunchMain(
+///     work: { someMainActorOnlyAPI() },
+///     reduce: { result in update { $0.value = result } }
+/// )
+/// ```
+@discardableResult
+public func strataLaunchMain<T: Sendable>(
+    priority: TaskPriority? = nil,
+    work: @escaping @MainActor @Sendable () async -> T,
+    reduce: @escaping @MainActor @Sendable (T) -> Void
+) -> Task<Void, Never> {
+    Task(priority: priority) { @MainActor in
+        let result = await work()
+        reduce(result)
+    }
+}

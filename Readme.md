@@ -41,7 +41,7 @@ flowchart LR
 |:---|:---|:---|
 | **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioContainer`, `TrapezioInterop`, `TrapezioMessage` |
 | **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost` |
-| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch`, `strataLaunchInterop`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
+| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch`, `strataLaunchInterop`, `strataLaunchMain`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
 
 ---
 
@@ -257,13 +257,14 @@ Trapezio enforces a robust threading model to prevent UI jank and race condition
 
 ### Concurrency Primitives
 
-All primitives use `Task.detached` to guarantee work runs off the main thread:
+Most primitives use `Task.detached` to guarantee work runs off the main thread. The exception is `strataLaunchMain(work:reduce:)`, which uses `Task` on the `@MainActor` for use cases requiring main-thread execution:
 
 | Function | Work Thread | Result Thread | Returns |
 |:---|:---|:---|:---|
 | `strataLaunch(work:reduce:)` | Detached (cooperative pool) | `@MainActor` via `reduce` | `Task<Void, Never>` |
 | `strataLaunchWithResult(operation:)` | Detached (cooperative pool) | Caller awaits `.value` | `Task<StrataResult<T>, Never>` |
 | `strataLaunchInterop(work:reduce:catch:)` | Detached (cooperative pool) | `@MainActor` via `reduce`/`catch` | `Task<Void, Never>` |
+| `strataLaunchMain(work:reduce:)` | `@MainActor` | `@MainActor` via `reduce` | `Task<Void, Never>` |
 | `strataCollect(stream, action:)` | Detached (cooperative pool) | `@MainActor` via `action` per emission | `Task<Void, Never>` |
 | `strataRunCatching { }` | Inherits caller context | Same | `StrataResult<T>` |
 

@@ -14,8 +14,17 @@
  * limitations under the License.
  */
 
+import Foundation
 import Testing
 @testable import Strata
+
+// MARK: - Helpers
+
+/// Wraps `Thread.isMainThread` in a plain function to avoid global-actor-isolation inference
+/// warnings when called from `@MainActor @Sendable` closures under strict concurrency.
+func checkIsMainThread() -> Bool {
+    Thread.isMainThread
+}
 
 // MARK: - Test Doubles
 
@@ -543,6 +552,34 @@ struct ConcurrencyHelperTests {
         for await _ in expectation.stream { break }
 
         #expect(caught == "void-error")
+    }
+
+    @Test("strataLaunchMain executes work and reduces on main actor")
+    @MainActor
+    func strataLaunchMainBasic() async {
+        var reduced: String?
+        var workOnMain = false
+        var reduceOnMain = false
+        let expectation = AsyncStream<Void>.makeStream()
+
+        strataLaunchMain(
+            work: {
+                workOnMain = checkIsMainThread()
+                return "main-hello"
+            },
+            reduce: { value in
+                reduceOnMain = checkIsMainThread()
+                reduced = value
+                expectation.continuation.yield()
+                expectation.continuation.finish()
+            }
+        )
+
+        for await _ in expectation.stream { break }
+
+        #expect(reduced == "main-hello")
+        #expect(workOnMain)
+        #expect(reduceOnMain)
     }
 
     @Test("strataCollect delivers stream values")
