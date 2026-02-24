@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
+import Foundation
 import Testing
 @testable import Strata
+
+// MARK: - Helpers
+
+/// Synchronous check usable from async contexts where `Thread.isMainThread` is unavailable.
+nonisolated func checkIsMainThread() -> Bool {
+    Thread.isMainThread
+}
 
 // MARK: - Test Doubles
 
@@ -549,11 +557,17 @@ struct ConcurrencyHelperTests {
     @MainActor
     func strataLaunchMainBasic() async {
         var reduced: String?
+        var workOnMain = false
+        var reduceOnMain = false
         let expectation = AsyncStream<Void>.makeStream()
 
         strataLaunchMain(
-            work: { "main-hello" },
+            work: {
+                workOnMain = checkIsMainThread()
+                return "main-hello"
+            },
             reduce: { value in
+                reduceOnMain = checkIsMainThread()
                 reduced = value
                 expectation.continuation.yield()
                 expectation.continuation.finish()
@@ -563,6 +577,8 @@ struct ConcurrencyHelperTests {
         for await _ in expectation.stream { break }
 
         #expect(reduced == "main-hello")
+        #expect(workOnMain)
+        #expect(reduceOnMain)
     }
 
     @Test("strataCollect delivers stream values")

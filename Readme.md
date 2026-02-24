@@ -257,7 +257,7 @@ Trapezio enforces a robust threading model to prevent UI jank and race condition
 
 ### Concurrency Primitives
 
-All primitives use `Task.detached` to guarantee work runs off the main thread:
+Most primitives use `Task.detached` to guarantee work runs off the main thread. The exception is `strataLaunchMain(work:reduce:)`, which uses `Task` on the `@MainActor` for use cases requiring main-thread execution:
 
 | Function | Work Thread | Result Thread | Returns |
 |:---|:---|:---|:---|

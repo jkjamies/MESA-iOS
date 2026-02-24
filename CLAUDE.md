@@ -118,7 +118,7 @@ All features MUST implement these 5 components:
 *   **Bridge**: `Store` → `UseCase` (await) → `Repository` (await, actor forces background hop) → result returns to Store's `@MainActor` context.
 
 #### Concurrency Threading Model
-All concurrency primitives use `Task.detached` to guarantee work runs off the main thread:
+Most concurrency primitives use `Task.detached` to guarantee work runs off the main thread. The exception is `strataLaunchMain(work:reduce:)`, which uses `Task` on the `@MainActor` for use cases requiring main-thread execution:
 
 | Function | Work Thread | Result Thread | Returns |
 |----------|-------------|---------------|---------|
