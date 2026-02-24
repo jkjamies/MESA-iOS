@@ -20,8 +20,9 @@ import Testing
 
 // MARK: - Helpers
 
-/// Synchronous check usable from async contexts where `Thread.isMainThread` is unavailable.
-nonisolated func checkIsMainThread() -> Bool {
+/// Wraps `Thread.isMainThread` in a plain function to avoid global-actor-isolation inference
+/// warnings when called from `@MainActor @Sendable` closures under strict concurrency.
+func checkIsMainThread() -> Bool {
     Thread.isMainThread
 }
 
