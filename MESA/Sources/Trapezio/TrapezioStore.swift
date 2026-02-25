@@ -15,13 +15,12 @@
  */
 
 import SwiftUI
-import Observation
 
 /// The single source of truth for a feature's presentation logic.
 ///
 /// `TrapezioStore` is the brain of every MESA feature. It holds the current ``State``,
 /// receives user intents as ``Event`` values, and mutates state via ``update(_:)``.
-/// SwiftUI observes state changes automatically through the `@Observable` macro.
+/// SwiftUI observes state changes through `ObservableObject` conformance.
 ///
 /// Subclass this for each feature and override ``handle(event:)`` to map events to state changes:
 ///
@@ -39,8 +38,7 @@ import Observation
 /// - Important: This class is `@MainActor`. All state reads/writes happen on the main thread.
 /// - Note: Use ``TrapezioContainer`` to preserve store identity across SwiftUI view updates.
 @MainActor
-@Observable
-open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent>: Identifiable {
+open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent>: ObservableObject, Identifiable {
     public let screen: S
     /// Current state snapshot. Readable from any isolation context (value-type copy).
     /// Writes are restricted to ``update(_:)`` on the `@MainActor`.
@@ -74,6 +72,7 @@ open class TrapezioStore<S: TrapezioScreen, State: TrapezioState, Event: Trapezi
         var copy = self.state
         transform(&copy)
         if copy != self.state {
+            self.objectWillChange.send()
             self.state = copy
         }
     }

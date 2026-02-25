@@ -15,27 +15,23 @@
  */
 
 import Foundation
-import Observation
 
 /// A transient message to be displayed to the user (e.g., Snackbar, Alert).
 public struct TrapezioMessage: Equatable, Identifiable, Sendable {
     public let id: UUID
     public let message: String
-    
+
     public init(message: String, id: UUID = UUID()) {
         self.message = message
         self.id = id
     }
-    
-
 }
 
 /// Manages a queue of transient messages.
 /// Observe `message` to show the current message.
 @MainActor
-@Observable
-public class TrapezioMessageManager {
-    public private(set) var messages: [TrapezioMessage] = []
+public class TrapezioMessageManager: ObservableObject {
+    @Published public private(set) var messages: [TrapezioMessage] = []
     
     public var message: TrapezioMessage? {
         messages.first

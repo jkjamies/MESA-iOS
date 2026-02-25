@@ -104,7 +104,7 @@ All features MUST implement these 5 components:
 1.  **Screen**: `TrapezioScreen` (`Hashable & Codable`) struct — route identity and parameters.
 2.  **State**: `TrapezioState` (`Equatable`) struct — immutable display data. `Equatable` enables `update()` to skip redundant publishes.
 3.  **Event**: `TrapezioEvent` enum — user intents (marker protocol, no requirements).
-4.  **Store**: `TrapezioStore<S, State, Event>` subclass — `@MainActor @Observable` logic owner. State is `nonisolated(unsafe)` for cross-isolation reads.
+4.  **Store**: `TrapezioStore<S, State, Event>` subclass — `@MainActor ObservableObject` logic owner. State is `nonisolated(unsafe)` for cross-isolation reads; `update()` calls `objectWillChange.send()` manually.
 5.  **UI**: `TrapezioUI` conformance — stateless `map(state:onEvent:) -> some View`.
 
 **Wiring**: Use `TrapezioContainer(makeStore:ui:)` to preserve store identity across SwiftUI view updates. Internally calls `store.render(with: ui)` which creates `TrapezioRuntime`.

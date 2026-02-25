@@ -45,6 +45,17 @@ flowchart LR
 
 ---
 
+## 📱 Platform Requirements
+
+| Platform | Minimum |
+|:---|:---|
+| iOS | 16.0 |
+| macOS | 13.0 |
+
+Trapezio currently uses `ObservableObject` to support iOS 16+. When iOS 17 becomes the minimum deployment target, the observation layer will migrate to `@Observable` for fine-grained tracking, and the `nonisolated(unsafe)` + manual `objectWillChange.send()` pattern on `TrapezioStore.state` will be replaced by the `@Observable` macro.
+
+---
+
 ## 📦 Installation
 
 ### Swift Package Manager
@@ -233,8 +244,8 @@ struct CounterFactory {
 
 ### TrapezioStore Internals
 
-- `@MainActor @Observable open class TrapezioStore<S, State, Event>`
-- `state` is `nonisolated(unsafe) public private(set)` — enables cross-isolation reads from detached tasks while writes are restricted to `update()` on the main actor
+- `@MainActor open class TrapezioStore<S, State, Event>: ObservableObject`
+- `state` is `nonisolated(unsafe) public private(set)` — enables cross-isolation reads from detached tasks while writes are restricted to `update()` on the main actor; `update()` calls `objectWillChange.send()` manually
 - `update(_ transform:)` — copy-on-write mutation with `Equatable` check to prevent unnecessary SwiftUI re-renders
 - `render(with: ui)` — binds the store to a `TrapezioUI` and returns a `TrapezioRuntime` view
 
