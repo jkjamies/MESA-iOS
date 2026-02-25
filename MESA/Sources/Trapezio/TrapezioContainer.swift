@@ -20,16 +20,16 @@ import SwiftUI
 ///
 /// Use this whenever you render a store in SwiftUI so the store isn't recreated
 /// during view updates (e.g. when navigating or when parent views re-render).
-public struct TrapezioContainer<Store: AnyObject, Content: View>: View {
+public struct TrapezioContainer<Store: ObservableObject, Content: View>: View {
 
-    @State private var store: Store
+    @StateObject private var store: Store
     private let content: (Store) -> Content
 
     public init(
         makeStore: @escaping @autoclosure () -> Store,
         @ViewBuilder content: @escaping (Store) -> Content
     ) {
-        _store = State(wrappedValue: makeStore())
+        _store = StateObject(wrappedValue: makeStore())
         self.content = content
     }
 
@@ -44,7 +44,7 @@ public extension TrapezioContainer {
         makeStore: @escaping @autoclosure () -> TrapezioStore<S, State, Event>,
         ui: UI
     ) where Store == TrapezioStore<S, State, Event>, Content == AnyView, UI.State == State, UI.Event == Event {
-        _store = SwiftUI.State(wrappedValue: makeStore())
+        _store = SwiftUI.StateObject(wrappedValue: makeStore())
         self.content = { store in
             AnyView(store.render(with: ui))
         }

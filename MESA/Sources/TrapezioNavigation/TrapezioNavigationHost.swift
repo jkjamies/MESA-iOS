@@ -15,7 +15,6 @@
  */
 
 import SwiftUI
-import Observation
 import Trapezio
 import os
 
@@ -31,7 +30,7 @@ public struct TrapezioNavigationHost: View {
     /// Receives custom navigation/dismissal requests for legacy interop.
     public typealias InteropHandler = (_ event: TrapezioInteropEvent) -> Void
 
-    @State private var navigator: TrapezioStackNavigator
+    @StateObject private var navigator: TrapezioStackNavigator
 
     private let builder: (any TrapezioScreen, any TrapezioNavigator, any TrapezioInterop) -> AnyView
 
@@ -44,7 +43,7 @@ public struct TrapezioNavigationHost: View {
         onInterop: InteropHandler? = nil,
         @ViewBuilder builder: @escaping (_ screen: any TrapezioScreen, _ navigator: any TrapezioNavigator, _ interop: any TrapezioInterop) -> Content
     ) {
-        _navigator = State(wrappedValue: TrapezioStackNavigator(root: root, onInterop: onInterop))
+        _navigator = StateObject(wrappedValue: TrapezioStackNavigator(root: root, onInterop: onInterop))
         self.builder = { (screen: any TrapezioScreen, navigator: any TrapezioNavigator, interop: any TrapezioInterop) -> AnyView in
             AnyView(builder(screen, navigator, interop))
         }
@@ -90,10 +89,9 @@ private let logger = Logger(subsystem: "Trapezio", category: "Navigation")
 
 /// A library-owned navigator that drives a `NavigationStack` by mutating its path.
 @MainActor
-@Observable
-internal final class TrapezioStackNavigator: TrapezioNavigator {
+internal final class TrapezioStackNavigator: ObservableObject, TrapezioNavigator {
 
-    internal var path: [TrapezioAnyScreen] = []
+    @Published internal var path: [TrapezioAnyScreen] = []
     internal var root: (any TrapezioScreen)?
     
     internal let interop: any TrapezioInterop

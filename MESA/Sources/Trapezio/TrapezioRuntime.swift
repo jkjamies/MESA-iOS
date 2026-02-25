@@ -21,8 +21,8 @@ internal struct TrapezioRuntime<S, State, Event, Store, UI>: View
 where S: TrapezioScreen, State: TrapezioState, Event: TrapezioEvent,
       Store: TrapezioStore<S, State, Event>, UI: TrapezioUI,
       UI.State == State, UI.Event == Event {
-    
-    let presenter: Store
+
+    @ObservedObject var presenter: Store
     private let ui: UI
     
     internal init(presenter: Store, ui: UI) {
