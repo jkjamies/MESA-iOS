@@ -55,10 +55,10 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
     *   Chainable: `onSuccess`, `onFailure`, `map`, `fold`, `getOrNull`, `getOrDefault`, `getOrElse`.
 *   **`StrataException`**: Protocol (`Error` + `message: String`) for domain failures.
 *   **Concurrency Primitives (`TrapezioStrataConcurrency`)**:
-    *   `strataLaunch(work:reduce:)`: Detached work + `@MainActor` reduce. Returns `Task` handle for cancellation.
+    *   `strataLaunch(work:reduce:)`: Detached work + `@MainActor` reduce. Checks `Task.isCancelled` after work — skips `reduce` if cancelled. Returns `Task` handle for cancellation.
     *   `strataLaunchWithResult(operation:)`: Detached work wrapped in `StrataResult`. Returns `Task<StrataResult<T>, Never>`.
-    *   `strataLaunchInterop(work:reduce:catch:)`: Legacy/migration interop — detached throwing work + `@MainActor` reduce/catch. No MESA types required. Use `strataLaunch` with interactors for new code.
-    *   `strataLaunchMain(work:reduce:)`: Main-thread work + `@MainActor` reduce. For use cases requiring `@MainActor`-isolated execution. Returns `Task` handle for cancellation.
+    *   `strataLaunchInterop(work:reduce:catch:)`: Legacy/migration interop — detached throwing work + `@MainActor` reduce/catch. Checks `Task.isCancelled` after work — routes `CancellationError()` to `catch` if cancelled. No MESA types required. Use `strataLaunch` with interactors for new code.
+    *   `strataLaunchMain(work:reduce:)`: Main-thread work + `@MainActor` reduce. Checks `Task.isCancelled` after work — skips `reduce` if cancelled. For use cases requiring `@MainActor`-isolated execution. Returns `Task` handle for cancellation.
     *   `strataCollect(stream, action:)`: Detached stream iteration + `@MainActor` action per value.
     *   `strataRunCatching { }`: Wraps async throwing block into `StrataResult`.
 
@@ -120,14 +120,14 @@ All features MUST implement these 5 components:
 #### Concurrency Threading Model
 Most concurrency primitives use `Task.detached` to guarantee work runs off the main thread. The exception is `strataLaunchMain(work:reduce:)`, which uses `Task` on the `@MainActor` for use cases requiring main-thread execution:
 
-| Function | Work Thread | Result Thread | Returns |
-|----------|-------------|---------------|---------|
-| `strataLaunch(work:reduce:)` | Detached (cooperative pool) | `@MainActor` via `reduce` | `Task<Void, Never>` |
-| `strataLaunchWithResult(operation:)` | Detached (cooperative pool) | Caller awaits `.value` | `Task<StrataResult<T>, Never>` |
-| `strataLaunchInterop(work:reduce:catch:)` | Detached (cooperative pool) | `@MainActor` via `reduce`/`catch` | `Task<Void, Never>` |
-| `strataLaunchMain(work:reduce:)` | `@MainActor` | `@MainActor` via `reduce` | `Task<Void, Never>` |
-| `strataCollect(stream, action:)` | Detached (cooperative pool) | `@MainActor` via `action` per emission | `Task<Void, Never>` |
-| `strataRunCatching { }` | Inherits caller context | Same | `StrataResult<T>` |
+| Function | Work Thread | Result Thread | Cancellation | Returns |
+|----------|-------------|---------------|--------------|---------|
+| `strataLaunch(work:reduce:)` | Detached (cooperative pool) | `@MainActor` via `reduce` | Skips `reduce` | `Task<Void, Never>` |
+| `strataLaunchWithResult(operation:)` | Detached (cooperative pool) | Caller awaits `.value` | — | `Task<StrataResult<T>, Never>` |
+| `strataLaunchInterop(work:reduce:catch:)` | Detached (cooperative pool) | `@MainActor` via `reduce`/`catch` | Routes `CancellationError()` to `catch` | `Task<Void, Never>` |
+| `strataLaunchMain(work:reduce:)` | `@MainActor` | `@MainActor` via `reduce` | Skips `reduce` | `Task<Void, Never>` |
+| `strataCollect(stream, action:)` | Detached (cooperative pool) | `@MainActor` via `action` per emission | — | `Task<Void, Never>` |
+| `strataRunCatching { }` | Inherits caller context | Same | — | `StrataResult<T>` |
 
 All return `@discardableResult` — ignore for fire-and-forget, or store the `Task` handle for cancellation.
 

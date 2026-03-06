@@ -582,6 +582,98 @@ struct ConcurrencyHelperTests {
         #expect(reduceOnMain)
     }
 
+    @Test("strataLaunch skips reduce when cancelled after work completes")
+    @MainActor
+    func strataLaunchCancellation() async {
+        var reduceCalled = false
+        let workStarted = AsyncStream<Void>.makeStream()
+
+        let task = strataLaunch(
+            work: {
+                workStarted.continuation.yield()
+                workStarted.continuation.finish()
+                // Give the test time to cancel before returning
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                return "result"
+            },
+            reduce: { _ in
+                reduceCalled = true
+            }
+        )
+
+        // Wait for work to start, then cancel
+        for await _ in workStarted.stream { break }
+        task.cancel()
+
+        // Wait for the task to finish
+        await task.value
+
+        #expect(!reduceCalled)
+    }
+
+    @Test("strataLaunchMain skips reduce when cancelled after work completes")
+    @MainActor
+    func strataLaunchMainCancellation() async {
+        var reduceCalled = false
+        let workFinished = AsyncStream<Void>.makeStream()
+
+        let task = strataLaunchMain(
+            work: {
+                // Yield to let the test body cancel the task
+                workFinished.continuation.yield()
+                workFinished.continuation.finish()
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                return "result"
+            },
+            reduce: { _ in
+                reduceCalled = true
+            }
+        )
+
+        for await _ in workFinished.stream { break }
+        task.cancel()
+
+        await task.value
+
+        #expect(!reduceCalled)
+    }
+
+    @Test("strataLaunchInterop routes CancellationError to catch when cancelled after work completes")
+    @MainActor
+    func strataLaunchInteropCancellation() async {
+        var reduceCalled = false
+        var caughtCancellation = false
+        let workStarted = AsyncStream<Void>.makeStream()
+        let done = AsyncStream<Void>.makeStream()
+
+        let task = strataLaunchInterop(
+            work: {
+                workStarted.continuation.yield()
+                workStarted.continuation.finish()
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                return "result"
+            },
+            reduce: { (_: String) in
+                reduceCalled = true
+                done.continuation.yield()
+                done.continuation.finish()
+            },
+            catch: { error in
+                caughtCancellation = error is CancellationError
+                done.continuation.yield()
+                done.continuation.finish()
+            }
+        )
+
+        for await _ in workStarted.stream { break }
+        task.cancel()
+
+        for await _ in done.stream { break }
+
+        #expect(!reduceCalled)
+        #expect(caughtCancellation)
+    }
+
     @Test("strataCollect delivers stream values")
     @MainActor
     func strataCollectBasic() async {
