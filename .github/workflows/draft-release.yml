@@ -24,7 +24,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          EXISTING=$(gh release list --json tagName,isDraft -q '.[] | select(.tagName == "${{ steps.version.outputs.version }}" and .isDraft) | .tagName')
+          EXISTING=$(gh release list --json tagName,isDraft -q 'first(.[] | select(.tagName == "${{ steps.version.outputs.version }}" and .isDraft) | .tagName) // empty')
           if [ -n "$EXISTING" ]; then
             gh release delete "$EXISTING" --yes
           fi
