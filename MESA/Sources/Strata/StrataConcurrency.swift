@@ -22,6 +22,9 @@ import Foundation
 /// whether or not a `StrataInteractor` is used. `reduce` is called on the `@MainActor` once work
 /// completes, guaranteeing all UI state updates happen on the main thread.
 ///
+/// After `work` completes, `Task.isCancelled` is checked. If the task was cancelled during execution,
+/// `reduce` is skipped entirely — preventing stale results from being applied to state.
+///
 /// ```swift
 /// // With interactor
 /// let count = state.count
@@ -63,6 +66,7 @@ public func strataLaunch<T: Sendable>(
 ) -> Task<Void, Never> {
     Task.detached(priority: priority) {
         let result = await work()
+        guard !Task.isCancelled else { return }
         await MainActor.run { reduce(result) }
     }
 }
@@ -74,6 +78,10 @@ public func strataLaunch<T: Sendable>(
 /// On failure, `catch` is called on the `@MainActor` with the plain `Error`.
 /// No MESA types (`StrataResult`, `StrataException`) are required — use `strataLaunch` with interactors
 /// for new code that has fully adopted Strata.
+///
+/// After `work` completes successfully, `Task.isCancelled` is checked. If the task was cancelled during
+/// execution, `catch` is called with a `CancellationError()` on the `@MainActor` and `reduce` is skipped —
+/// preventing stale results from being applied to state.
 ///
 /// ```swift
 /// // Fire-and-forget with error handling (reduce omitted)
@@ -99,6 +107,10 @@ public func strataLaunchInterop<T: Sendable>(
     Task.detached(priority: priority) {
         do {
             let result = try await work()
+            if Task.isCancelled {
+                await MainActor.run { `catch`(CancellationError()) }
+                return
+            }
             await MainActor.run { reduce(result) }
         } catch {
             await MainActor.run { `catch`(error) }
@@ -158,6 +170,9 @@ public func strataCollect<T: Sendable>(
 /// main-thread-only APIs). For all other cases, prefer `strataLaunch` which keeps work off
 /// the main thread.
 ///
+/// After `work` completes, `Task.isCancelled` is checked. If the task was cancelled during execution,
+/// `reduce` is skipped entirely — preventing stale results from being applied to state.
+///
 /// ```swift
 /// strataLaunchMain(
 ///     work: { someMainActorOnlyAPI() },
@@ -172,6 +187,7 @@ public func strataLaunchMain<T: Sendable>(
 ) -> Task<Void, Never> {
     Task(priority: priority) { @MainActor in
         let result = await work()
+        guard !Task.isCancelled else { return }
         reduce(result)
     }
 }
