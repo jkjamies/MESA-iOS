@@ -18,67 +18,6 @@ import Foundation
 import Testing
 @testable import Strata
 
-// MARK: - Helpers
-
-/// Wraps `Thread.isMainThread` in a plain function to avoid global-actor-isolation inference
-/// warnings when called from `@MainActor @Sendable` closures under strict concurrency.
-func checkIsMainThread() -> Bool {
-    Thread.isMainThread
-}
-
-// MARK: - Test Doubles
-
-struct TestException: StrataException {
-    let message: String
-}
-
-final class DoubleInteractor: StrataInteractor<Int, String>, @unchecked Sendable {
-    override func doWork(params: Int) async -> StrataResult<String> {
-        return .success("value:\(params)")
-    }
-}
-
-final class FailingInteractor: StrataInteractor<Void, String>, @unchecked Sendable {
-    override func doWork(params: Void) async -> StrataResult<String> {
-        return .failure(TestException(message: "something went wrong"))
-    }
-}
-
-final class ThrowingInteractor: StrataInteractor<Void, String>, @unchecked Sendable {
-    override func doWork(params: Void) async -> StrataResult<String> {
-        return await executeCatching(params: params) { _ in
-            throw TestException(message: "thrown")
-        }
-    }
-}
-
-final class SlowInteractor: StrataInteractor<Void, Void>, @unchecked Sendable {
-    override func doWork(params: Void) async -> StrataResult<Void> {
-        try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
-        return .success(())
-    }
-}
-
-final class SimpleSubjectInteractor: StrataSubjectInteractor<Int, String>, @unchecked Sendable {
-    override func createObservable(params: Int) -> AsyncStream<String> {
-        AsyncStream { continuation in
-            continuation.yield("value:\(params)")
-            continuation.finish()
-        }
-    }
-}
-
-final class ContinuousSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
-    override func createObservable(params: Int) -> AsyncStream<Int> {
-        AsyncStream { continuation in
-            for i in 0..<3 {
-                continuation.yield(params * 10 + i)
-            }
-            continuation.finish()
-        }
-    }
-}
-
 // MARK: - StrataResult Tests
 
 @Suite("StrataResult")
@@ -93,7 +32,7 @@ struct StrataResultTests {
 
     @Test("getOrNull returns nil on failure")
     func getOrNullFailure() {
-        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "err"))
 
         #expect(result.getOrNull() == nil)
     }
@@ -111,7 +50,7 @@ struct StrataResultTests {
     @Test("onSuccess does not execute for failure case")
     func onSuccessSkipsFailure() {
         var called = false
-        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "err"))
 
         result.onSuccess { _ in called = true }
 
@@ -121,7 +60,7 @@ struct StrataResultTests {
     @Test("onFailure executes for failure case")
     func onFailureCallback() {
         var captured: String?
-        let result: StrataResult<Int> = .failure(TestException(message: "bad"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "bad"))
 
         result.onFailure { captured = $0.message }
 
@@ -166,7 +105,7 @@ struct StrataRunCatchingTests {
     @Test("wraps StrataException on throw")
     func strataExceptionCase() async {
         let result: StrataResult<Int> = await strataRunCatching {
-            throw TestException(message: "domain error")
+            throw FakeStrataException(message: "domain error")
         }
 
         var message: String?
@@ -194,7 +133,7 @@ struct StrataExceptionTests {
 
     @Test("localizedDescription returns message")
     func localizedDescription() {
-        let err = TestException(message: "test error")
+        let err = FakeStrataException(message: "test error")
 
         #expect(err.localizedDescription == "test error")
     }
@@ -207,7 +146,7 @@ struct StrataInteractorTests {
 
     @Test("execute returns success result")
     func executeSuccess() async {
-        let interactor = DoubleInteractor()
+        let interactor = FakeDoubleInteractor()
 
         let result = await interactor.execute(params: 5)
 
@@ -216,7 +155,7 @@ struct StrataInteractorTests {
 
     @Test("execute returns failure result")
     func executeFailure() async {
-        let interactor = FailingInteractor()
+        let interactor = FakeFailingInteractor()
 
         let result = await interactor.execute(params: ())
 
@@ -229,7 +168,7 @@ struct StrataInteractorTests {
 
     @Test("executeCatching bridges thrown errors to failure")
     func executeCatchingBridgesThrows() async {
-        let interactor = ThrowingInteractor()
+        let interactor = FakeThrowingInteractor()
 
         let result = await interactor.execute(params: ())
 
@@ -241,18 +180,42 @@ struct StrataInteractorTests {
 
     @Test("inProgress is false before execution")
     func inProgressInitiallyFalse() {
-        let interactor = SlowInteractor()
+        let interactor = FakeSlowInteractor()
 
         #expect(interactor.inProgress == false)
     }
 
     @Test("inProgress is false after execution completes")
     func inProgressFalseAfterComplete() async {
-        let interactor = SlowInteractor()
+        let interactor = FakeSlowInteractor()
 
         _ = await interactor.execute(params: ())
 
         #expect(interactor.inProgress == false)
+    }
+
+    @Test("inProgressStream emits initial false then true/false transitions")
+    func inProgressStreamTransitions() async {
+        let interactor = FakeSlowInteractor()
+
+        let task = Task { () -> [Bool] in
+            var collected: [Bool] = []
+            for await value in interactor.inProgressStream {
+                collected.append(value)
+                // Expect: false (initial), true (started), false (finished)
+                if collected.count >= 3 { break }
+            }
+            return collected
+        }
+
+        // Let the stream subscription set up
+        try? await Task.sleep(nanoseconds: 10_000_000)
+
+        _ = await interactor.execute(params: ())
+
+        let collected = await task.value
+
+        #expect(collected == [false, true, false])
     }
 }
 
@@ -263,7 +226,7 @@ struct StrataSubjectInteractorTests {
 
     @Test("emits values from createObservable")
     func basicEmission() async {
-        let interactor = SimpleSubjectInteractor()
+        let interactor = FakeSimpleSubjectInteractor()
 
         let task = Task { () -> [String] in
             var collected: [String] = []
@@ -285,7 +248,7 @@ struct StrataSubjectInteractorTests {
 
     @Test("emits multiple values per trigger")
     func multipleEmissions() async {
-        let interactor = ContinuousSubjectInteractor()
+        let interactor = FakeContinuousSubjectInteractor()
 
         let task = Task { () -> [Int] in
             var collected: [Int] = []
@@ -306,7 +269,7 @@ struct StrataSubjectInteractorTests {
 
     @Test("caches latest value")
     func valueCaching() async {
-        let interactor = SimpleSubjectInteractor()
+        let interactor = FakeSimpleSubjectInteractor()
 
         #expect(interactor.value == nil)
 
@@ -329,7 +292,7 @@ struct StrataSubjectInteractorTests {
     @Test("re-trigger cancels previous inner stream")
     func retriggerCancelsPrevious() async {
         // Use a slow interactor that emits values with delays
-        final class SlowSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
+        final class FakeSlowSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
             override func createObservable(params: Int) -> AsyncStream<Int> {
                 AsyncStream { continuation in
                     Task {
@@ -344,7 +307,7 @@ struct StrataSubjectInteractorTests {
             }
         }
 
-        let interactor = SlowSubjectInteractor()
+        let interactor = FakeSlowSubjectInteractor()
 
         let task = Task { () -> [Int] in
             var collected: [Int] = []
@@ -365,7 +328,10 @@ struct StrataSubjectInteractorTests {
         let collected = await task.value
 
         // The last values should be from the second trigger (params=2)
-        let lastValue = collected.last!
+        guard let lastValue = collected.last else {
+            Issue.record("Expected collected values but array was empty")
+            return
+        }
         #expect(lastValue >= 200, "Expected values from second trigger, got \(collected)")
     }
 }
@@ -386,7 +352,7 @@ struct StrataResultHelperTests {
 
     @Test("map preserves failure")
     func mapFailure() {
-        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "err"))
 
         let mapped = result.map { $0 * 2 }
 
@@ -407,7 +373,7 @@ struct StrataResultHelperTests {
 
     @Test("fold returns onFailure value for failure")
     func foldFailure() {
-        let result: StrataResult<Int> = .failure(TestException(message: "bad"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "bad"))
 
         let folded = result.fold(onSuccess: { "got \($0)" }, onFailure: { $0.message })
 
@@ -423,7 +389,7 @@ struct StrataResultHelperTests {
 
     @Test("getOrDefault returns default on failure")
     func getOrDefaultFailure() {
-        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "err"))
 
         #expect(result.getOrDefault(0) == 0)
     }
@@ -437,7 +403,7 @@ struct StrataResultHelperTests {
 
     @Test("getOrElse returns transform result on failure")
     func getOrElseFailure() {
-        let result: StrataResult<Int> = .failure(TestException(message: "err"))
+        let result: StrataResult<Int> = .failure(FakeStrataException(message: "err"))
 
         #expect(result.getOrElse { _ in -1 } == -1)
     }
@@ -480,7 +446,7 @@ struct ConcurrencyHelperTests {
     @Test("strataLaunchWithResult wraps thrown error")
     func strataLaunchWithResultFailure() async {
         let task = strataLaunchWithResult {
-            throw TestException(message: "failed")
+            throw FakeStrataException(message: "failed")
             return 0 // unreachable, needed for type inference
         }
 
@@ -520,10 +486,10 @@ struct ConcurrencyHelperTests {
         let expectation = AsyncStream<Void>.makeStream()
 
         strataLaunchInterop(
-            work: { throw TestException(message: "interop-error") },
+            work: { throw FakeStrataException(message: "interop-error") },
             reduce: { (_: Int) in },
             catch: { error in
-                caught = (error as? TestException)?.message
+                caught = (error as? FakeStrataException)?.message
                 expectation.continuation.yield()
                 expectation.continuation.finish()
             }
@@ -541,9 +507,9 @@ struct ConcurrencyHelperTests {
         let expectation = AsyncStream<Void>.makeStream()
 
         strataLaunchInterop(
-            work: { throw TestException(message: "void-error") },
+            work: { throw FakeStrataException(message: "void-error") },
             catch: { error in
-                caught = (error as? TestException)?.message
+                caught = (error as? FakeStrataException)?.message
                 expectation.continuation.yield()
                 expectation.continuation.finish()
             }

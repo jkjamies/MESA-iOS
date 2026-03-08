@@ -18,38 +18,6 @@ import Foundation
 import Testing
 @testable import Trapezio
 
-// MARK: - Test Doubles
-
-struct TestScreen: TrapezioScreen {}
-
-struct TestState: TrapezioState {
-    var count: Int = 0
-    var label: String = ""
-}
-
-enum TestEvent: TrapezioEvent {
-    case increment
-    case decrement
-    case setLabel(String)
-}
-
-@MainActor
-final class TestStore: TrapezioStore<TestScreen, TestState, TestEvent> {
-    var handledEvents: [TestEvent] = []
-
-    override func handle(event: TestEvent) {
-        handledEvents.append(event)
-        switch event {
-        case .increment:
-            update { $0.count += 1 }
-        case .decrement:
-            update { $0.count -= 1 }
-        case .setLabel(let text):
-            update { $0.label = text }
-        }
-    }
-}
-
 // MARK: - TrapezioStore Tests
 
 @Suite("TrapezioStore")
@@ -57,8 +25,8 @@ struct TrapezioStoreTests {
 
     @Test("initializes with screen and state")
     @MainActor func initialization() {
-        let screen = TestScreen()
-        let store = TestStore(screen: screen, initialState: TestState(count: 5))
+        let screen = FakeScreen()
+        let store = FakeStore(screen: screen, initialState: FakeState(count: 5))
 
         #expect(store.state.count == 5)
         #expect(store.screen == screen)
@@ -66,7 +34,7 @@ struct TrapezioStoreTests {
 
     @Test("update mutates state via copy-on-write")
     @MainActor func updateMutatesState() {
-        let store = TestStore(screen: TestScreen(), initialState: TestState())
+        let store = FakeStore(screen: FakeScreen(), initialState: FakeState())
 
         store.update { $0.count = 42 }
 
@@ -75,7 +43,7 @@ struct TrapezioStoreTests {
 
     @Test("update skips publish when state is unchanged")
     @MainActor func updateSkipsWhenEqual() {
-        let store = TestStore(screen: TestScreen(), initialState: TestState(count: 1))
+        let store = FakeStore(screen: FakeScreen(), initialState: FakeState(count: 1))
 
         // Mutate to the same value — state reference should remain unchanged semantically
         store.update { $0.count = 1 }
@@ -85,7 +53,7 @@ struct TrapezioStoreTests {
 
     @Test("handle(event:) dispatches to override")
     @MainActor func handleEvent() {
-        let store = TestStore(screen: TestScreen(), initialState: TestState())
+        let store = FakeStore(screen: FakeScreen(), initialState: FakeState())
 
         store.handle(event: .increment)
         store.handle(event: .increment)
@@ -97,7 +65,7 @@ struct TrapezioStoreTests {
 
     @Test("multiple update fields are independent")
     @MainActor func independentFields() {
-        let store = TestStore(screen: TestScreen(), initialState: TestState())
+        let store = FakeStore(screen: FakeScreen(), initialState: FakeState())
 
         store.handle(event: .increment)
         store.handle(event: .setLabel("hello"))
@@ -108,8 +76,8 @@ struct TrapezioStoreTests {
 
     @Test("conforms to Identifiable")
     @MainActor func identifiable() {
-        let store1 = TestStore(screen: TestScreen(), initialState: TestState())
-        let store2 = TestStore(screen: TestScreen(), initialState: TestState())
+        let store1 = FakeStore(screen: FakeScreen(), initialState: FakeState())
+        let store2 = FakeStore(screen: FakeScreen(), initialState: FakeState())
 
         #expect(store1.id != store2.id)
     }
@@ -184,16 +152,68 @@ struct TrapezioMessageManagerTests {
 
         #expect(manager.message == first)
     }
+
+    @Test("messagesSequence emits initial value then updates on emit")
+    @MainActor func messagesSequenceEmits() async {
+        let manager = TrapezioMessageManager()
+        let msg = TrapezioMessage(message: "streamed")
+
+        let task = Task { @MainActor () -> [[TrapezioMessage]] in
+            var collected: [[TrapezioMessage]] = []
+            for await value in manager.messagesSequence {
+                collected.append(value)
+                // Expect: [] (initial), [msg] (after emit)
+                if collected.count >= 2 { break }
+            }
+            return collected
+        }
+
+        // Let the stream subscription set up
+        try? await Task.sleep(nanoseconds: 10_000_000)
+
+        manager.emit(msg)
+
+        let collected = await task.value
+
+        #expect(collected.count == 2)
+        #expect(collected[0].isEmpty)
+        #expect(collected[1] == [msg])
+    }
+
+    @Test("messagesSequence emits update on clearMessage")
+    @MainActor func messagesSequenceClear() async {
+        let manager = TrapezioMessageManager()
+        let msg = TrapezioMessage(message: "to-clear")
+
+        // Pre-populate so the initial emission is non-empty
+        manager.emit(msg)
+
+        let task = Task { @MainActor () -> [[TrapezioMessage]] in
+            var collected: [[TrapezioMessage]] = []
+            for await value in manager.messagesSequence {
+                collected.append(value)
+                // Expect: [msg] (initial), [] (after clear)
+                if collected.count >= 2 { break }
+            }
+            return collected
+        }
+
+        try? await Task.sleep(nanoseconds: 10_000_000)
+
+        manager.clearMessage(id: msg.id)
+
+        let collected = await task.value
+
+        #expect(collected.count == 2)
+        #expect(collected[0] == [msg])
+        #expect(collected[1].isEmpty)
+    }
 }
 
 // MARK: - ClosureTrapezioInterop Tests
 
 @Suite("ClosureTrapezioInterop")
 struct ClosureTrapezioInteropTests {
-
-    enum TestInteropEvent: TrapezioInteropEvent {
-        case didTap
-    }
 
     @Test("send delegates to closure")
     func sendDelegatesToClosure() {
@@ -202,8 +222,8 @@ struct ClosureTrapezioInteropTests {
             received = event
         }
 
-        interop.send(TestInteropEvent.didTap)
+        interop.send(FakeInteropEvent.didTap)
 
-        #expect(received is TestInteropEvent)
+        #expect(received is FakeInteropEvent)
     }
 }
