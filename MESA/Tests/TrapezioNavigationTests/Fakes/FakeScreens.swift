@@ -18,4 +18,11 @@
 
 struct FakeScreenA: TrapezioScreen {}
 struct FakeScreenB: TrapezioScreen {}
-struct FakeScreenC: TrapezioScreen { var id: Int = 0 }
+/// Intentionally uses a constant hash to verify `dismissTo` matches on `Equatable`, not `hashValue`.
+struct FakeScreenC: TrapezioScreen {
+    let id: Int
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(0)
+    }
+}

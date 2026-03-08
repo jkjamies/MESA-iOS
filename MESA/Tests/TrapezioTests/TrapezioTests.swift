@@ -158,26 +158,15 @@ struct TrapezioMessageManagerTests {
         let manager = TrapezioMessageManager()
         let msg = TrapezioMessage(message: "streamed")
 
-        let task = Task { @MainActor () -> [[TrapezioMessage]] in
-            var collected: [[TrapezioMessage]] = []
-            for await value in manager.messagesSequence {
-                collected.append(value)
-                // Expect: [] (initial), [msg] (after emit)
-                if collected.count >= 2 { break }
-            }
-            return collected
-        }
+        var iter = manager.messagesSequence.makeAsyncIterator()
 
-        // Let the stream subscription set up
-        try? await Task.sleep(nanoseconds: 10_000_000)
+        let initial = await iter.next()
+        #expect(initial == [])
 
         manager.emit(msg)
 
-        let collected = await task.value
-
-        #expect(collected.count == 2)
-        #expect(collected[0].isEmpty)
-        #expect(collected[1] == [msg])
+        let updated = await iter.next()
+        #expect(updated == [msg])
     }
 
     @Test("messagesSequence emits update on clearMessage")
@@ -188,25 +177,15 @@ struct TrapezioMessageManagerTests {
         // Pre-populate so the initial emission is non-empty
         manager.emit(msg)
 
-        let task = Task { @MainActor () -> [[TrapezioMessage]] in
-            var collected: [[TrapezioMessage]] = []
-            for await value in manager.messagesSequence {
-                collected.append(value)
-                // Expect: [msg] (initial), [] (after clear)
-                if collected.count >= 2 { break }
-            }
-            return collected
-        }
+        var iter = manager.messagesSequence.makeAsyncIterator()
 
-        try? await Task.sleep(nanoseconds: 10_000_000)
+        let initial = await iter.next()
+        #expect(initial == [msg])
 
         manager.clearMessage(id: msg.id)
 
-        let collected = await task.value
-
-        #expect(collected.count == 2)
-        #expect(collected[0] == [msg])
-        #expect(collected[1].isEmpty)
+        let cleared = await iter.next()
+        #expect(cleared == [])
     }
 }
 

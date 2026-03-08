@@ -140,7 +140,7 @@ struct <Name>StoreTests {
 ```swift
 import Foundation
 import Testing
-@testable import Strata
+@testable import <AppTarget>
 
 @Suite("<Name>UseCase")
 struct <Name>UseCaseTests {
@@ -175,7 +175,7 @@ final class <Name>UseCaseTests: XCTestCase {
         // When
         let result = await useCase.execute(params: /* params */)
         // Then
-        XCTAssertEqual(result, /* expected */)
+        XCTAssertEqual(result.getOrNull(), /* expected */)
     }
 }
 ```

@@ -13,7 +13,9 @@ Scaffold a new feature module with the correct directory structure and DI wiring
 
 ---
 
-## Step 1: Determine Feature Name
+## Step 1: Determine Feature Name and App Target
+
+Identify the **app target** (`<AppTarget>`) by looking at the Xcode project's main application target (e.g., `Counter` for the sample app). This is the folder that contains the app's feature modules — not the Swift package (`MESA`).
 
 Extract the feature name from the input (e.g., `Profile`). This becomes:
 - Directory: `<AppTarget>/<FeatureName>/`
@@ -51,7 +53,7 @@ Create the module directories and files based on the selected layers. **Do not s
 <AppTarget>/<FeatureName>/Domain/
 ```
 
-The `Domain` module contains pure Swift business logic. No framework imports (no SwiftUI, SwiftData, UIKit). Repository protocols and use cases live here.
+The `Domain` module contains pure Swift business logic. No UI framework imports (no SwiftUI, SwiftData, UIKit). Foundation is allowed. Repository protocols and use cases live here.
 
 ### `Data/` layer
 
@@ -172,7 +174,7 @@ All source files generated directly by this skill MUST include the Apache 2.0 li
 
 ## Step 7: Verify
 
-Run `cd MESA && swift build` to verify the package compiles. If Counter app files were changed, also run `xcodebuild build -scheme Counter -destination 'platform=iOS Simulator,name=iPhone 16'`.
+Run `cd MESA && swift build` to verify the package compiles. If app target files were changed, also run `xcodebuild build -scheme <AppTarget> -destination 'platform=iOS Simulator,name=<SimulatorDevice>'` (e.g., `-scheme Counter -destination 'platform=iOS Simulator,name=iPhone 16'`).
 
 Report:
 - Which directories and files were created

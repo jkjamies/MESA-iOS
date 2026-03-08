@@ -53,7 +53,7 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
     *   `value` property caches the latest emission (thread-safe, read-only externally).
 *   **`StrataResult<T>`**: Discriminated union (`.success(T)` / `.failure(StrataException)`).
     *   Chainable: `onSuccess`, `onFailure`, `map`, `fold`, `getOrNull`, `getOrDefault`, `getOrElse`.
-*   **`StrataException`**: Protocol (`Error` + `message: String`) for domain failures.
+*   **`StrataException`**: Protocol (`Error & Sendable` + `message: String`) for domain failures.
 *   **Concurrency Primitives (`TrapezioStrataConcurrency`)**:
     *   `strataLaunch(work:reduce:)`: Detached work + `@MainActor` reduce. Checks `Task.isCancelled` after work — skips `reduce` if cancelled. Returns `Task` handle for cancellation.
     *   `strataLaunchWithResult(operation:)`: Detached work wrapped in `StrataResult`. Returns `Task<StrataResult<T>, Never>`.

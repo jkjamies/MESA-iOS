@@ -34,7 +34,7 @@ Read the `VERSION` file at the repository root to get the current version string
 
 Apply semantic versioning and display the version change for confirmation:
 
-```
+```text
 Current → New
 0.2.0   → 0.3.0
 ```

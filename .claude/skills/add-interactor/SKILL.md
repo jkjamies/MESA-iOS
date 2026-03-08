@@ -138,7 +138,7 @@ Place at: `<AppTarget>Tests/<InteractorName>UseCaseTests.swift`
 ```swift
 import Foundation
 import Testing
-@testable import Strata
+@testable import <AppTarget>
 
 @Suite("<InteractorName>UseCase")
 struct <InteractorName>UseCaseTests {

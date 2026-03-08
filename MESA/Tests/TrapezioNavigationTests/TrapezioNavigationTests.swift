@@ -47,7 +47,7 @@ struct TrapezioStackNavigatorTests {
     @MainActor func dismiss() {
         let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
         nav.goTo(FakeScreenB())
-        nav.goTo(FakeScreenC())
+        nav.goTo(FakeScreenC(id: 0))
 
         nav.dismiss()
 
@@ -67,7 +67,7 @@ struct TrapezioStackNavigatorTests {
     @MainActor func dismissToRoot() {
         let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
         nav.goTo(FakeScreenB())
-        nav.goTo(FakeScreenC())
+        nav.goTo(FakeScreenC(id: 0))
 
         nav.dismissToRoot()
 
@@ -90,7 +90,7 @@ struct TrapezioStackNavigatorTests {
     @MainActor func dismissToRootScreen() {
         let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
         nav.goTo(FakeScreenB())
-        nav.goTo(FakeScreenC())
+        nav.goTo(FakeScreenC(id: 0))
 
         nav.dismissTo(FakeScreenA())
 
@@ -102,7 +102,7 @@ struct TrapezioStackNavigatorTests {
         let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
         nav.goTo(FakeScreenB())
 
-        nav.dismissTo(FakeScreenC())
+        nav.dismissTo(FakeScreenC(id: 0))
 
         #expect(nav.path.count == 1)
     }

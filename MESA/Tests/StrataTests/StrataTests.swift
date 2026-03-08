@@ -198,24 +198,20 @@ struct StrataInteractorTests {
     func inProgressStreamTransitions() async {
         let interactor = FakeSlowInteractor()
 
-        let task = Task { () -> [Bool] in
-            var collected: [Bool] = []
-            for await value in interactor.inProgressStream {
-                collected.append(value)
-                // Expect: false (initial), true (started), false (finished)
-                if collected.count >= 3 { break }
-            }
-            return collected
-        }
+        var iter = interactor.inProgressStream.makeAsyncIterator()
 
-        // Let the stream subscription set up
-        try? await Task.sleep(nanoseconds: 10_000_000)
+        let initial = await iter.next()
+        #expect(initial == false)
 
-        _ = await interactor.execute(params: ())
+        let executeTask = Task { _ = await interactor.execute(params: ()) }
 
-        let collected = await task.value
+        let started = await iter.next()
+        #expect(started == true)
 
-        #expect(collected == [false, true, false])
+        let finished = await iter.next()
+        #expect(finished == false)
+
+        await executeTask.value
     }
 }
 
@@ -291,22 +287,6 @@ struct StrataSubjectInteractorTests {
 
     @Test("re-trigger cancels previous inner stream")
     func retriggerCancelsPrevious() async {
-        // Use a slow interactor that emits values with delays
-        final class FakeSlowSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
-            override func createObservable(params: Int) -> AsyncStream<Int> {
-                AsyncStream { continuation in
-                    Task {
-                        for i in 0..<5 {
-                            guard !Task.isCancelled else { break }
-                            continuation.yield(params * 100 + i)
-                            try? await Task.sleep(nanoseconds: 20_000_000) // 20ms between values
-                        }
-                        continuation.finish()
-                    }
-                }
-            }
-        }
-
         let interactor = FakeSlowSubjectInteractor()
 
         let task = Task { () -> [Int] in

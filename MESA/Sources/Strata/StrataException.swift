@@ -19,7 +19,7 @@ import Foundation
 // MARK: - StrataException
 
 /// Base error type for all Strata business logic failures
-public protocol StrataException: Error {
+public protocol StrataException: Error, Sendable {
     var message: String { get }
 }
 

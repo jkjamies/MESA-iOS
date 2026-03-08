@@ -18,9 +18,18 @@ Quick feedback on the current diff. Focus on catching bugs, logic errors, and co
 Determine which diff to review:
 - `--staged` → `git diff --cached` (only staged changes)
 - `--uncommitted` → `git diff HEAD` (only uncommitted changes)
-- No flag → Default to `git diff main` (all changes on the branch vs main, committed and uncommitted)
+- No flag → Default to reviewing the current branch against `main`
 
-Also run `git status` to identify new untracked files included in the changes.
+**When reviewing the current branch against main (default):**
+
+1. Run these commands in parallel:
+   - `git log main..HEAD --oneline` — list commits on this branch
+   - `git diff main...HEAD --stat` — file-level summary of changes
+2. Then run `git diff main...HEAD` to get the full diff.
+   - If the diff output is too large to read at once, read it in chunks using offset/limit, or read each changed file individually instead.
+3. Run `git status` to identify any uncommitted or untracked changes not yet in the diff.
+
+**Do NOT use `gh` CLI commands** — it may not be installed. Use only `git` commands for gathering diffs and commit history.
 
 Read the diff output AND the full content of each changed file so you can assess whether the changed code is correct in context.
 

@@ -16,11 +16,17 @@ Perform a thorough pre-merge audit of the current changes. Start from the diff, 
 ## Step 1: Gather Changes
 
 Get all changes on the branch compared to main:
-- Run `git diff main` to capture all committed and uncommitted changes on the branch
 
-Also run `git status` to identify new untracked files.
+1. Run these commands in parallel:
+   - `git log main..HEAD --oneline` — list commits on this branch
+   - `git diff main...HEAD --stat` — file-level summary of changes
+2. Then run `git diff main...HEAD` to get the full diff.
+   - If the diff output is too large to read at once, read it in chunks using offset/limit, or read each changed file individually instead.
+3. Run `git status` to identify any uncommitted or untracked changes not yet in the diff.
 
 Read the diff output AND the full content of every changed file.
+
+**Do NOT use `gh` CLI commands** — it may not be installed. Use only `git` commands for gathering diffs and commit history.
 
 ---
 

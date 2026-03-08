@@ -36,3 +36,19 @@ final class FakeContinuousSubjectInteractor: StrataSubjectInteractor<Int, Int>, 
         }
     }
 }
+
+final class FakeSlowSubjectInteractor: StrataSubjectInteractor<Int, Int>, @unchecked Sendable {
+    override func createObservable(params: Int) -> AsyncStream<Int> {
+        AsyncStream { continuation in
+            let task = Task {
+                for i in 0..<5 {
+                    guard !Task.isCancelled else { break }
+                    continuation.yield(params * 100 + i)
+                    try? await Task.sleep(nanoseconds: 20_000_000) // 20ms between values
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
