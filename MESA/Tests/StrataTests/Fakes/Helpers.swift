@@ -16,16 +16,8 @@
 
 import Foundation
 
-// MARK: - StrataException
-
-/// Base error type for all Strata business logic failures
-public protocol StrataException: Error, Sendable {
-    var message: String { get }
-}
-
-/// Default implementation for StrataException
-extension StrataException {
-    public var localizedDescription: String {
-        return message
-    }
+/// Wraps `Thread.isMainThread` in a plain function to avoid global-actor-isolation inference
+/// warnings when called from `@MainActor @Sendable` closures under strict concurrency.
+func checkIsMainThread() -> Bool {
+    Thread.isMainThread
 }

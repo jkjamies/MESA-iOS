@@ -41,7 +41,7 @@ flowchart LR
 |:---|:---|:---|
 | **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioContainer`, `TrapezioInterop`, `TrapezioMessage` |
 | **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost` |
-| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `strataLaunch`, `strataLaunchInterop`, `strataLaunchMain`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
+| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `StrataException`, `strataLaunch`, `strataLaunchInterop`, `strataLaunchMain`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
 
 ---
 
@@ -280,6 +280,10 @@ Most primitives use `Task.detached` to guarantee work runs off the main thread. 
 | `strataRunCatching { }` | Inherits caller context | Same | — | `StrataResult<T>` |
 
 All return `@discardableResult` — ignore for fire-and-forget, or store the `Task` handle for cancellation.
+
+### StrataException
+
+`StrataException` is the base error protocol (`Error & Sendable` + `message: String`) for all domain failures. It is the error type carried by `StrataResult.failure`. Implement it on simple structs to define domain-specific errors.
 
 ### StrataResult Operations
 

@@ -15,17 +15,8 @@
  */
 
 import Foundation
+@testable import Strata
 
-// MARK: - StrataException
-
-/// Base error type for all Strata business logic failures
-public protocol StrataException: Error, Sendable {
-    var message: String { get }
-}
-
-/// Default implementation for StrataException
-extension StrataException {
-    public var localizedDescription: String {
-        return message
-    }
+struct FakeStrataException: StrataException {
+    let message: String
 }

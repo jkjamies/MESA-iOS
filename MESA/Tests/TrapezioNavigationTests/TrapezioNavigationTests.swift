@@ -18,12 +18,6 @@ import Testing
 @testable import Trapezio
 @testable import TrapezioNavigation
 
-// MARK: - Test Doubles
-
-struct ScreenA: TrapezioScreen {}
-struct ScreenB: TrapezioScreen {}
-struct ScreenC: TrapezioScreen { var id: Int = 0 }
-
 // MARK: - TrapezioStackNavigator Tests
 
 @Suite("TrapezioStackNavigator")
@@ -31,29 +25,29 @@ struct TrapezioStackNavigatorTests {
 
     @Test("goTo appends screen to path")
     @MainActor func goTo() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
 
-        nav.goTo(ScreenB())
+        nav.goTo(FakeScreenB())
 
         #expect(nav.path.count == 1)
     }
 
     @Test("goTo multiple screens builds stack")
     @MainActor func goToMultiple() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
 
-        nav.goTo(ScreenB())
-        nav.goTo(ScreenC(id: 1))
-        nav.goTo(ScreenC(id: 2))
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 1))
+        nav.goTo(FakeScreenC(id: 2))
 
         #expect(nav.path.count == 3)
     }
 
     @Test("dismiss pops last screen")
     @MainActor func dismiss() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenB())
-        nav.goTo(ScreenC())
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 0))
 
         nav.dismiss()
 
@@ -62,7 +56,7 @@ struct TrapezioStackNavigatorTests {
 
     @Test("dismiss on empty path is no-op")
     @MainActor func dismissEmpty() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
 
         nav.dismiss()
 
@@ -71,9 +65,9 @@ struct TrapezioStackNavigatorTests {
 
     @Test("dismissToRoot clears entire path")
     @MainActor func dismissToRoot() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenB())
-        nav.goTo(ScreenC())
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 0))
 
         nav.dismissToRoot()
 
@@ -82,46 +76,46 @@ struct TrapezioStackNavigatorTests {
 
     @Test("dismissTo pops back to matching screen in path")
     @MainActor func dismissToScreen() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenB())
-        nav.goTo(ScreenC(id: 1))
-        nav.goTo(ScreenC(id: 2))
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 1))
+        nav.goTo(FakeScreenC(id: 2))
 
-        nav.dismissTo(ScreenB())
+        nav.dismissTo(FakeScreenB())
 
         #expect(nav.path.count == 1)
     }
 
     @Test("dismissTo root screen clears path")
     @MainActor func dismissToRootScreen() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenB())
-        nav.goTo(ScreenC())
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 0))
 
-        nav.dismissTo(ScreenA())
+        nav.dismissTo(FakeScreenA())
 
         #expect(nav.path.isEmpty)
     }
 
     @Test("dismissTo non-existent screen is no-op")
     @MainActor func dismissToNonExistent() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenB())
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
 
-        nav.dismissTo(ScreenC())
+        nav.dismissTo(FakeScreenC(id: 0))
 
         #expect(nav.path.count == 1)
     }
 
     @Test("dismissTo finds last occurrence when duplicates exist")
     @MainActor func dismissToLastOccurrence() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenB())       // index 0
-        nav.goTo(ScreenC(id: 1))  // index 1
-        nav.goTo(ScreenB())       // index 2
-        nav.goTo(ScreenC(id: 2))  // index 3
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())       // index 0
+        nav.goTo(FakeScreenC(id: 1))  // index 1
+        nav.goTo(FakeScreenB())       // index 2
+        nav.goTo(FakeScreenC(id: 2))  // index 3
 
-        nav.dismissTo(ScreenB())
+        nav.dismissTo(FakeScreenB())
 
         // Should keep up to the LAST ScreenB (index 2), so 3 items in path
         #expect(nav.path.count == 3)
@@ -129,22 +123,22 @@ struct TrapezioStackNavigatorTests {
 
     @Test("dismissTo uses Equatable not just hashValue")
     @MainActor func dismissToUsesEquatable() {
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: nil)
-        nav.goTo(ScreenC(id: 1))
-        nav.goTo(ScreenC(id: 2))
-        nav.goTo(ScreenB())
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenC(id: 1))
+        nav.goTo(FakeScreenC(id: 2))
+        nav.goTo(FakeScreenB())
 
-        // Should find ScreenC(id: 1), not ScreenC(id: 2)
-        nav.dismissTo(ScreenC(id: 1))
+        // Should find FakeScreenC(id: 1), not FakeScreenC(id: 2)
+        nav.dismissTo(FakeScreenC(id: 1))
 
         #expect(nav.path.count == 1)
     }
 
     @Test("root is preserved after navigation")
     @MainActor func rootPreserved() {
-        let root = ScreenA()
+        let root = FakeScreenA()
         let nav = TrapezioStackNavigator(root: root, onInterop: nil)
-        nav.goTo(ScreenB())
+        nav.goTo(FakeScreenB())
         nav.dismissToRoot()
 
         #expect(nav.root != nil)
@@ -154,7 +148,7 @@ struct TrapezioStackNavigatorTests {
     @MainActor func interopHandler() {
         enum TestEvent: TrapezioInteropEvent { case test }
         var received = false
-        let nav = TrapezioStackNavigator(root: ScreenA(), onInterop: { _ in
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: { _ in
             received = true
         })
 

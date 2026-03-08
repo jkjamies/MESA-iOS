@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-import Foundation
+@testable import Trapezio
 
-// MARK: - StrataException
+struct FakeScreenA: TrapezioScreen {}
+struct FakeScreenB: TrapezioScreen {}
+/// Intentionally uses a constant hash to verify `dismissTo` matches on `Equatable`, not `hashValue`.
+struct FakeScreenC: TrapezioScreen {
+    let id: Int
 
-/// Base error type for all Strata business logic failures
-public protocol StrataException: Error, Sendable {
-    var message: String { get }
-}
-
-/// Default implementation for StrataException
-extension StrataException {
-    public var localizedDescription: String {
-        return message
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(0)
     }
 }
