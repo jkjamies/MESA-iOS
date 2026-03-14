@@ -150,17 +150,17 @@ public func strataRunCatching<T>(_ block: () async throws -> T) async -> StrataR
 
 /// Wraps an unexpected (non-`StrataException`) error caught during interactor execution.
 ///
-/// Preserves the original error for inspection while conforming to `StrataException`
-/// for uniform error handling in `StrataResult` chains.
-///
-/// `@unchecked Sendable` because `underlyingError` is `Error` (not `Sendable`).
-/// Safe: both stored properties are immutable (`let`), so no cross-isolation mutation is possible.
-public struct StrataExecutionException: StrataException, @unchecked Sendable {
+/// Stores a Sendable snapshot of the original error (description and type name)
+/// for inspection while conforming to `StrataException` for uniform error handling
+/// in `StrataResult` chains.
+public struct StrataExecutionException: StrataException {
     public let message: String
-    public let underlyingError: Error
+    public let underlyingErrorType: String
+    public let underlyingErrorDescription: String
 
     public init(error: Error) {
         self.message = error.localizedDescription
-        self.underlyingError = error
+        self.underlyingErrorType = String(describing: type(of: error))
+        self.underlyingErrorDescription = String(describing: error)
     }
 }

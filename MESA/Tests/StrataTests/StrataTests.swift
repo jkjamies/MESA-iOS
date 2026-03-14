@@ -139,7 +139,7 @@ struct StrataRunCatchingTests {
         #expect(isCancellation)
     }
 
-    @Test("StrataExecutionException preserves underlying error")
+    @Test("StrataExecutionException preserves underlying error snapshot")
     func executionExceptionPreservesError() async {
         struct SpecificError: Error, Equatable {}
 
@@ -147,13 +147,13 @@ struct StrataRunCatchingTests {
             throw SpecificError()
         }
 
-        var underlying: Error?
+        var errorType: String?
         result.onFailure { error in
             if let exec = error as? StrataExecutionException {
-                underlying = exec.underlyingError
+                errorType = exec.underlyingErrorType
             }
         }
-        #expect(underlying is SpecificError)
+        #expect(errorType == "SpecificError")
     }
 
     @Test("StrataExecutionException.message is localizedDescription of original")
