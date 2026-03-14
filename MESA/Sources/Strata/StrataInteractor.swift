@@ -112,6 +112,8 @@ open class StrataInteractor<P: Sendable, T: Sendable>: @unchecked Sendable {
                 // returns above. Required by the compiler for exhaustive coverage.
                 return .failure(StrataTimeoutException(duration: timeout))
             }
+        } catch is CancellationError {
+            return .failure(StrataCancellationException())
         } catch {
             return .failure(StrataExecutionException(error: error))
         }
@@ -119,18 +121,11 @@ open class StrataInteractor<P: Sendable, T: Sendable>: @unchecked Sendable {
     
     /// Helper to bridge throws to StrataResult in doWork implementations.
     ///
-    /// All errors — including `CancellationError` — are caught and wrapped in a
-    /// `.failure` result, making this safe to call from the non-throwing `doWork`.
-    /// Cooperative cancellation is still handled at the `execute` level via the task group.
+    /// Delegates to ``strataRunCatching(_:)`` so that `CancellationError` is mapped to
+    /// `StrataCancellationException`, `StrataException` is preserved, and all other errors
+    /// are wrapped in `StrataExecutionException`.
     public func executeCatching(params: P, block: (P) async throws -> T) async -> StrataResult<T> {
-        do {
-            let result = try await block(params)
-            return .success(result)
-        } catch let error as any StrataException {
-            return .failure(error)
-        } catch {
-            return .failure(StrataExecutionException(error: error))
-        }
+        await strataRunCatching { try await block(params) }
     }
 }
 
