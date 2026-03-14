@@ -36,4 +36,25 @@ public protocol TrapezioNavigator: AnyObject {
 
     /// Requests dismissal back to a specific strongly-typed TrapezioScreen.
     func dismissTo(_ screen: any TrapezioScreen)
+
+    // MARK: - Result Passing
+
+    /// Dismisses the current screen and delivers `result` to the previous screen.
+    ///
+    /// - Parameters:
+    ///   - key: Unique key matching the consumer's `consumeResult(forKey:)` call.
+    ///   - result: The result data to pass back.
+    func popWithResult<R: TrapezioNavigationResult>(key: String, result: R)
+
+    /// Consumes and returns the pending result for `key`, or `nil` if none.
+    /// Results are single-consumption: calling this a second time returns `nil`.
+    func consumeResult(forKey key: String) -> (any TrapezioNavigationResult)?
+
+    /// Type-safe convenience that consumes and casts the pending result for `key`.
+    /// Returns `nil` if no result exists or if the result is not of the expected type.
+    func consumeResult<R: TrapezioNavigationResult>(forKey key: String, as type: R.Type) -> R?
+
+    /// Removes all unconsumed results.
+    /// Call during screen lifecycle teardown to prevent stale results from accumulating.
+    func clearResults()
 }

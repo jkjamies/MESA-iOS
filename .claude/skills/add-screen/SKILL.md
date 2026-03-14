@@ -188,11 +188,12 @@ final class <ScreenName>StoreTests: XCTestCase {
 }
 ```
 
-For MESA library (Swift Testing):
+For MESA library (Swift Testing) — use `TrapezioTest` utilities when testing navigation:
 
 ```swift
 import Foundation
 import Testing
+import TrapezioTest
 @testable import <Target>
 
 @Suite("<ScreenName>Store")
@@ -206,6 +207,11 @@ struct <ScreenName>StoreTests {
         )
         #expect(store.state == <ScreenName>State(/* expected */))
     }
+
+    // Use FakeTrapezioNavigator to assert navigation:
+    // let nav = FakeTrapezioNavigator()
+    // store.handle(event: .someNavEvent)
+    // #expect(nav.navigatedScreens.count == 1)
 }
 ```
 

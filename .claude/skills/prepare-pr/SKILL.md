@@ -100,7 +100,7 @@ Present findings with checkboxes as you go:
 - [ ] `StrataSubjectInteractor` overrides `createObservable(params:)`
 - [ ] `strataLaunch` used for async work in Stores (not raw `Task { }`)
 - [ ] `strataCollect` used for stream observation
-- [ ] `StrataResult` extensions used idiomatically (`onSuccess`, `onFailure`, `fold`, `map`, etc.)
+- [ ] `StrataResult` extensions used idiomatically (`onSuccess`, `onFailure`, `fold`, `map`, `flatMap`, `recover`, etc.)
 - [ ] Loading state bound via `strataCollect(useCase.inProgressStream)`
 
 ### Clean Architecture
@@ -122,7 +122,7 @@ Present findings with checkboxes as you go:
 - [ ] All events and state transitions in changed code are covered
 - [ ] Error paths and edge cases are tested
 - [ ] Navigation flows are tested (nil navigator doesn't crash)
-- [ ] Fakes exist for new dependencies in `Fakes/` subdirectory
+- [ ] Fakes exist for new dependencies in `Fakes/` subdirectory or use `TrapezioTest` library (`FakeTrapezioNavigator`, `TestEventSink`)
 - [ ] Async tests use `Task.sleep` for `strataLaunch` timing
 - [ ] Store tests are `@MainActor`
 - [ ] Test doubles marked `@unchecked Sendable` where needed

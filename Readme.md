@@ -41,7 +41,8 @@ flowchart LR
 |:---|:---|:---|
 | **Trapezio** | Core MVI/UDF primitives | `TrapezioStore`, `TrapezioState`, `TrapezioScreen`, `TrapezioUI`, `TrapezioContainer`, `TrapezioInterop`, `TrapezioMessage` |
 | **TrapezioNavigation** | Type-safe Navigation | `TrapezioNavigator`, `TrapezioNavigationHost` |
-| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `StrataException`, `strataLaunch`, `strataLaunchInterop`, `strataLaunchMain`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
+| **Strata** | Clean Architecture & Logic | `StrataInteractor`, `StrataSubjectInteractor`, `StrataResult`, `StrataException`, `StrataExecutionException`, `StrataTimeoutException`, `strataLaunch`, `strataLaunchInterop`, `strataLaunchMain`, `strataLaunchWithResult`, `strataCollect`, `strataRunCatching` |
+| **TrapezioTest** | Test Utilities | `FakeTrapezioNavigator`, `TestEventSink`, `NavigationEvent`, `TrapezioStore.test()`, `TrapezioStore.awaitState()` |
 
 ---
 
@@ -77,6 +78,8 @@ Then add the libraries you need to your target:
         .product(name: "Trapezio", package: "MESA-iOS"),
         .product(name: "TrapezioNavigation", package: "MESA-iOS"),
         .product(name: "Strata", package: "MESA-iOS"),
+        // For test targets only:
+        // .product(name: "TrapezioTest", package: "MESA-iOS"),
     ]
 )
 ```
@@ -251,7 +254,9 @@ struct CounterFactory {
 
 ### TrapezioMessage
 
-`TrapezioMessageManager` provides transient user-facing messages (snackbars, alerts). Emit via `emit(_:)`, observe via `messagesSequence` (`AsyncStream<[TrapezioMessage]>`), clear via `clearMessage(id:)` or `clearAll()`.
+`TrapezioMessageManager` provides transient user-facing messages (snackbars, alerts). Emit via `emit(_:)`, observe via `messagesSequence` (`AsyncStream<[TrapezioMessage]>`), clear via `clearMessage(id:)` or `clearAll()`. The queue is capped at 10 messages — oldest are dropped when over capacity.
+
+`TrapezioMessage` can be created from a `String` or directly from an `Error` (uses `localizedDescription`).
 
 ---
 
@@ -292,14 +297,28 @@ All return `@discardableResult` — ignore for fire-and-forget, or store the `Ta
 | `.onSuccess { }` | Executes closure on success, returns self (chainable) |
 | `.onFailure { }` | Executes closure on failure, returns self (chainable) |
 | `.map { }` | Transforms success value, preserves failure |
+| `.flatMap { }` | Chains dependent `StrataResult`-returning operations; short-circuits on failure |
+| `.recover { }` | Attempts async recovery on failure, passes through on success |
 | `.fold(onSuccess:onFailure:)` | Exhaustive match returning a single value |
 | `.getOrNull()` | Returns value or nil |
 | `.getOrDefault(_:)` | Returns value or provided default |
 | `.getOrElse { }` | Returns value or result of transform on error |
 
+### StrataException & Error Types
+
+| Type | Description |
+|:---|:---|
+| `StrataException` | Base error protocol (`Error & Sendable` + `message: String`) for domain failures |
+| `StrataExecutionException` | Wraps unexpected (non-`StrataException`) errors; preserves `underlyingError` |
+| `StrataTimeoutException` | Indicates interactor execution exceeded its `timeout` duration |
+
+`strataRunCatching` re-throws `CancellationError` rather than wrapping it in `.failure`, allowing Swift's cooperative cancellation to propagate correctly.
+
 ### StrataInteractor
 
 `StrataInteractor<P, T>` provides built-in `inProgress` state (thread-safe via `OSAllocatedUnfairLock`) and an `inProgressStream` (`AsyncStream<Bool>`, single-consumer) for binding loading indicators. `executeCatching(params:block:)` bridges throwing code to `StrataResult`.
+
+`execute(params:timeout:)` supports configurable timeout protection (default: 5 minutes). If `doWork` exceeds the timeout, the result is `.failure(StrataTimeoutException)` and the work task is cancelled.
 
 ### StrataSubjectInteractor
 
@@ -340,6 +359,40 @@ TrapezioNavigationHost(root: CounterScreen(initialValue: 0)) { screen, navigator
 | `dismiss()` | Pop the current screen |
 | `dismissToRoot()` | Pop to the root of the stack |
 | `dismissTo(_ screen:)` | Pop back to a specific screen |
+| `popWithResult(key:result:)` | Pop and deliver a typed result to the previous screen |
+| `consumeResult(forKey:)` | Consume and return a pending result (single-consumption) |
+| `consumeResult(forKey:as:)` | Type-safe convenience to consume and cast a result |
+| `clearResults()` | Remove all unconsumed results (called automatically by `dismissToRoot()`) |
+
+### Navigation Result Passing
+
+`TrapezioNavigationResult` is a marker protocol (`Sendable`) that result types must conform to:
+
+```swift
+struct EditResult: TrapezioNavigationResult {
+    let name: String
+}
+```
+
+**Producing a result** — call `popWithResult` in the producing Store's event handler:
+
+```swift
+// In EditStore.handle(event:)
+case .saveTapped:
+    navigator?.popWithResult(key: "edit_result", result: EditResult(name: state.name))
+```
+
+**Consuming a result** — call `consumeResult` in the consuming Store, typically when the screen reappears:
+
+```swift
+// In ListStore.handle(event:)
+case .onAppear:
+    if let result = navigator?.consumeResult(forKey: "edit_result", as: EditResult.self) {
+        update { $0.name = result.name }
+    }
+```
+
+Results are single-consumption — calling `consumeResult` a second time returns `nil`. On type mismatch, `consumeResult(forKey:as:)` preserves the result so a subsequent call with the correct type still succeeds.
 
 ### TrapezioInterop
 

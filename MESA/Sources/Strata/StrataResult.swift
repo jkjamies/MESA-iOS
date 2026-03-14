@@ -78,4 +78,33 @@ public enum StrataResult<T>: Sendable where T: Sendable {
         case .failure(let error): return transform(error)
         }
     }
+
+    /// Returns a new `StrataResult` produced by `transform` if success,
+    /// or the original failure unchanged.
+    ///
+    /// Use to chain dependent operations that each return a `StrataResult`:
+    /// ```swift
+    /// let profile = fetchUser(id).flatMap { user in fetchProfile(user.profileId) }
+    /// ```
+    public func flatMap<R>(_ transform: (T) -> StrataResult<R>) -> StrataResult<R> {
+        switch self {
+        case .success(let data): return transform(data)
+        case .failure(let error): return .failure(error)
+        }
+    }
+
+    /// Returns the original result if success, or the result of `transform`
+    /// applied to the error if failure.
+    ///
+    /// Use to recover from a failure with a fallback operation:
+    /// ```swift
+    /// let result = await primaryUseCase.execute(params: p)
+    ///     .recover { _ in await fallbackUseCase.execute(params: p) }
+    /// ```
+    public func recover(_ transform: (any StrataException) async -> StrataResult<T>) async -> StrataResult<T> {
+        switch self {
+        case .success: return self
+        case .failure(let error): return await transform(error)
+        }
+    }
 }

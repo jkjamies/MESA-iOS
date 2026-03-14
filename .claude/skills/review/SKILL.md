@@ -66,7 +66,7 @@ Verify MESA conventions are followed. Present as a concise pass/fail list — on
 - [ ] State mutations only via `update { $0.field = value }`
 - [ ] Dependencies injected via `init`, not globals or singletons
 - [ ] Async work uses `strataLaunch`/`strataCollect`, not raw `Task { }`
-- [ ] Interactors return `StrataResult` (or use `executeCatching`)
+- [ ] Interactors return `StrataResult` (or use `executeCatching` — note: `executeCatching` now throws, wrap in `do/catch`)
 - [ ] Domain layer has no framework imports (no SwiftUI, SwiftData)
 - [ ] Data layer uses `actor` isolation
 - [ ] Module boundaries respected (presentation doesn't import data layer)

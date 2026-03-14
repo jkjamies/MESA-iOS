@@ -156,4 +156,116 @@ struct TrapezioStackNavigatorTests {
 
         #expect(received)
     }
+
+    // MARK: - Result Passing
+
+    @Test("popWithResult stores result and pops")
+    @MainActor func popWithResult() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+
+        nav.popWithResult(key: "test_key", result: FakeNavigationResult(value: "hello"))
+
+        #expect(nav.path.isEmpty)
+    }
+
+    @Test("consumeResult returns stored result")
+    @MainActor func consumeResult() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.popWithResult(key: "test_key", result: FakeNavigationResult(value: "hello"))
+
+        let result = nav.consumeResult(forKey: "test_key") as? FakeNavigationResult
+
+        #expect(result == FakeNavigationResult(value: "hello"))
+    }
+
+    @Test("consumeResult returns nil on second call")
+    @MainActor func consumeResultSingleConsumption() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.popWithResult(key: "test_key", result: FakeNavigationResult(value: "hello"))
+
+        _ = nav.consumeResult(forKey: "test_key")
+        let second = nav.consumeResult(forKey: "test_key")
+
+        #expect(second == nil)
+    }
+
+    @Test("consumeResult returns nil for unknown key")
+    @MainActor func consumeResultUnknownKey() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+
+        let result = nav.consumeResult(forKey: "nonexistent")
+
+        #expect(result == nil)
+    }
+
+    @Test("multiple results with different keys consumed independently")
+    @MainActor func multipleResults() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 1))
+
+        nav.popWithResult(key: "key_a", result: FakeNavigationResult(value: "a"))
+        nav.popWithResult(key: "key_b", result: AnotherFakeResult(number: 42))
+
+        let a = nav.consumeResult(forKey: "key_a", as: FakeNavigationResult.self)
+        let b = nav.consumeResult(forKey: "key_b", as: AnotherFakeResult.self)
+
+        #expect(a == FakeNavigationResult(value: "a"))
+        #expect(b == AnotherFakeResult(number: 42))
+    }
+
+    @Test("consumeResult with type returns typed result")
+    @MainActor func consumeResultTyped() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.popWithResult(key: "typed", result: FakeNavigationResult(value: "typed"))
+
+        let result = nav.consumeResult(forKey: "typed", as: FakeNavigationResult.self)
+
+        #expect(result == FakeNavigationResult(value: "typed"))
+    }
+
+    @Test("consumeResult with wrong type returns nil and preserves result")
+    @MainActor func consumeResultTypeMismatchPreserves() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.popWithResult(key: "key", result: FakeNavigationResult(value: "hello"))
+
+        let wrong = nav.consumeResult(forKey: "key", as: AnotherFakeResult.self)
+
+        #expect(wrong == nil)
+        // Result should still be available with the correct type
+        let correct = nav.consumeResult(forKey: "key", as: FakeNavigationResult.self)
+        #expect(correct == FakeNavigationResult(value: "hello"))
+    }
+
+    @Test("dismissToRoot clears unconsumed results")
+    @MainActor func dismissToRootClearsResults() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.popWithResult(key: "key", result: FakeNavigationResult(value: "stale"))
+        nav.goTo(FakeScreenC(id: 1))
+
+        nav.dismissToRoot()
+
+        #expect(nav.path.isEmpty)
+        #expect(nav.consumeResult(forKey: "key") == nil)
+    }
+
+    @Test("clearResults removes all unconsumed results")
+    @MainActor func clearResults() {
+        let nav = TrapezioStackNavigator(root: FakeScreenA(), onInterop: nil)
+        nav.goTo(FakeScreenB())
+        nav.goTo(FakeScreenC(id: 1))
+        nav.popWithResult(key: "key_a", result: FakeNavigationResult(value: "a"))
+        nav.popWithResult(key: "key_b", result: AnotherFakeResult(number: 42))
+
+        nav.clearResults()
+
+        #expect(nav.consumeResult(forKey: "key_a") == nil)
+        #expect(nav.consumeResult(forKey: "key_b") == nil)
+    }
 }

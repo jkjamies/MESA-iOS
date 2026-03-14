@@ -14,24 +14,15 @@
  * limitations under the License.
  */
 
-@testable import Trapezio
-@testable import TrapezioNavigation
+import Foundation
 
-struct FakeScreenA: TrapezioScreen {}
-struct FakeScreenB: TrapezioScreen {}
-/// Intentionally uses a constant hash to verify `dismissTo` matches on `Equatable`, not `hashValue`.
-struct FakeScreenC: TrapezioScreen {
-    let id: Int
+/// Indicates that a `StrataInteractor` execution exceeded its timeout duration.
+public struct StrataTimeoutException: StrataException, Equatable {
+    public let message: String
+    public let duration: TimeInterval
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(0)
+    public init(duration: TimeInterval) {
+        self.duration = duration
+        self.message = "Execution timed out after \(duration) seconds"
     }
-}
-
-struct FakeNavigationResult: TrapezioNavigationResult, Equatable {
-    let value: String
-}
-
-struct AnotherFakeResult: TrapezioNavigationResult, Equatable {
-    let number: Int
 }

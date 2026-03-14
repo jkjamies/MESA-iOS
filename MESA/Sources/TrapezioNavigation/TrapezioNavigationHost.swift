@@ -93,8 +93,9 @@ internal final class TrapezioStackNavigator: ObservableObject, TrapezioNavigator
 
     @Published internal var path: [TrapezioAnyScreen] = []
     internal var root: (any TrapezioScreen)?
-    
+
     internal let interop: any TrapezioInterop
+    private var results: [String: any TrapezioNavigationResult] = [:]
 
     internal init(root: any TrapezioScreen, onInterop: TrapezioNavigationHost.InteropHandler?) {
         self.root = root
@@ -114,6 +115,7 @@ internal final class TrapezioStackNavigator: ObservableObject, TrapezioNavigator
 
     internal func dismissToRoot() {
         path.removeAll()
+        clearResults()
     }
     
     internal func dismissTo(_ screen: any TrapezioScreen) {
@@ -132,5 +134,27 @@ internal final class TrapezioStackNavigator: ObservableObject, TrapezioNavigator
         } else {
             logger.warning("dismissTo(\(String(describing: screen))) failed — screen not found in stack.")
         }
+    }
+
+    internal func popWithResult<R: TrapezioNavigationResult>(key: String, result: R) {
+        results[key] = result
+        dismiss()
+    }
+
+    internal func consumeResult(forKey key: String) -> (any TrapezioNavigationResult)? {
+        results.removeValue(forKey: key)
+    }
+
+    internal func consumeResult<R: TrapezioNavigationResult>(forKey key: String, as type: R.Type) -> R? {
+        guard let raw = results.removeValue(forKey: key) else { return nil }
+        if let typed = raw as? R { return typed }
+        // Type mismatch — restore the result so it isn't silently lost.
+        results[key] = raw
+        logger.warning("consumeResult(forKey: \(key)) type mismatch: expected \(String(describing: R.self)), got \(String(describing: Swift.type(of: raw)))")
+        return nil
+    }
+
+    internal func clearResults() {
+        results.removeAll()
     }
 }
