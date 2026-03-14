@@ -14,24 +14,13 @@
  * limitations under the License.
  */
 
-@testable import Trapezio
-@testable import TrapezioNavigation
+import Foundation
 
-struct FakeScreenA: TrapezioScreen {}
-struct FakeScreenB: TrapezioScreen {}
-/// Intentionally uses a constant hash to verify `dismissTo` matches on `Equatable`, not `hashValue`.
-struct FakeScreenC: TrapezioScreen {
-    let id: Int
+/// Indicates that an operation was cancelled via Swift's cooperative cancellation.
+public struct StrataCancellationException: StrataException, Equatable {
+    public let message: String
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(0)
+    public init() {
+        self.message = "Operation was cancelled"
     }
-}
-
-struct FakeNavigationResult: TrapezioNavigationResult, Equatable {
-    let value: String
-}
-
-struct AnotherFakeResult: TrapezioNavigationResult, Equatable {
-    let number: Int
 }

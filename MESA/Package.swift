@@ -39,6 +39,10 @@ let package = Package(
             name: "Strata",
             targets: ["Strata"]
         ),
+        .library(
+            name: "TrapezioTest",
+            targets: ["TrapezioTest"]
+        ),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -64,6 +68,14 @@ let package = Package(
         .testTarget(
             name: "StrataTests",
             dependencies: ["Strata"]
+        ),
+        .target(
+            name: "TrapezioTest",
+            dependencies: ["Trapezio", "TrapezioNavigation"]
+        ),
+        .testTarget(
+            name: "TrapezioTestTests",
+            dependencies: ["TrapezioTest"]
         ),
     ]
 )

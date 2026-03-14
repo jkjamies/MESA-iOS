@@ -114,7 +114,7 @@ struct StrataRunCatchingTests {
         #expect(message == "domain error")
     }
 
-    @Test("wraps generic error as GenericStrataException")
+    @Test("wraps generic error as StrataExecutionException")
     func genericErrorCase() async {
         struct PlainError: Error {}
 
@@ -123,6 +123,53 @@ struct StrataRunCatchingTests {
         }
 
         #expect(result.getOrNull() == nil)
+        var isExecutionException = false
+        result.onFailure { isExecutionException = $0 is StrataExecutionException }
+        #expect(isExecutionException)
+    }
+
+    @Test("CancellationError is mapped to StrataCancellationException")
+    func cancellationErrorMapped() async {
+        let result: StrataResult<Int> = await strataRunCatching {
+            throw CancellationError()
+        }
+
+        var isCancellation = false
+        result.onFailure { isCancellation = $0 is StrataCancellationException }
+        #expect(isCancellation)
+    }
+
+    @Test("StrataExecutionException preserves underlying error")
+    func executionExceptionPreservesError() async {
+        struct SpecificError: Error, Equatable {}
+
+        let result: StrataResult<Int> = await strataRunCatching {
+            throw SpecificError()
+        }
+
+        var underlying: Error?
+        result.onFailure { error in
+            if let exec = error as? StrataExecutionException {
+                underlying = exec.underlyingError
+            }
+        }
+        #expect(underlying is SpecificError)
+    }
+
+    @Test("StrataExecutionException.message is localizedDescription of original")
+    func executionExceptionMessage() async {
+        enum DescribedError: Error, LocalizedError {
+            case test
+            var errorDescription: String? { "custom description" }
+        }
+
+        let result: StrataResult<Int> = await strataRunCatching {
+            throw DescribedError.test
+        }
+
+        var message: String?
+        result.onFailure { message = $0.message }
+        #expect(message == "custom description")
     }
 }
 
@@ -167,7 +214,7 @@ struct StrataInteractorTests {
     }
 
     @Test("executeCatching bridges thrown errors to failure")
-    func executeCatchingBridgesThrows() async {
+    func executeCatchingBridgesThrows() async throws {
         let interactor = FakeThrowingInteractor()
 
         let result = await interactor.execute(params: ())
@@ -436,6 +483,21 @@ struct ConcurrencyHelperTests {
         var message: String?
         result.onFailure { message = $0.message }
         #expect(message == "failed")
+    }
+
+    @Test("strataLaunchWithResult wraps CancellationError as StrataCancellationException")
+    func strataLaunchWithResultCancellation() async {
+        let task = strataLaunchWithResult {
+            throw CancellationError()
+            return 0 // unreachable, needed for type inference
+        }
+
+        let result = await task.value
+
+        #expect(result.getOrNull() == nil)
+        var isCancellation = false
+        result.onFailure { isCancellation = $0 is StrataCancellationException }
+        #expect(isCancellation)
     }
 
     @Test("strataLaunchInterop delivers success to reduce on main")

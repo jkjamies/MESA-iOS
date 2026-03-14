@@ -14,24 +14,7 @@
  * limitations under the License.
  */
 
-@testable import Trapezio
-@testable import TrapezioNavigation
+import Foundation
 
-struct FakeScreenA: TrapezioScreen {}
-struct FakeScreenB: TrapezioScreen {}
-/// Intentionally uses a constant hash to verify `dismissTo` matches on `Equatable`, not `hashValue`.
-struct FakeScreenC: TrapezioScreen {
-    let id: Int
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(0)
-    }
-}
-
-struct FakeNavigationResult: TrapezioNavigationResult, Equatable {
-    let value: String
-}
-
-struct AnotherFakeResult: TrapezioNavigationResult, Equatable {
-    let number: Int
-}
+/// Marker protocol for navigation results that can be passed between screens.
+public protocol TrapezioNavigationResult: Sendable {}

@@ -23,7 +23,7 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
 
 ### 1. The Separation of Concerns
 *   **Presentation Layer (UI & Logic)**:
-    *   **Components**: `TrapezioStore`, `TrapezioUI`, `TrapezioScreen`, `TrapezioContainer`, `TrapezioRuntime`, `TrapezioMessage`/`TrapezioMessageManager`.
+    *   **Components**: `TrapezioStore`, `TrapezioUI`, `TrapezioScreen`, `TrapezioContainer`, `TrapezioRuntime`, `TrapezioMessage`/`TrapezioMessageManager`. Test utilities: `TrapezioTest` library (`FakeTrapezioNavigator`, `TestEventSink`, `TrapezioStore.test()`/`.awaitState()`).
     *   **Threading**: Strictly **@MainActor**.
     *   **Dependencies**: Depends on `:domain`. NEVER depends on `:data`.
     *   **Rule**: UI is a stateless function of State. Store is the Single Source of Truth.
@@ -43,23 +43,26 @@ We enforce a strict implementation of **Clean Architecture** combined with **MVI
 ### 2. Strata Operations (Use Cases)
 *   **`StrataInteractor<P, T>`**: Open class for one-shot async operations.
     *   Subclass and override `doWork(params:)`.
-    *   Returns `StrataResult<T>`. Call via `execute(params:)`.
+    *   Returns `StrataResult<T>`. Call via `execute(params:timeout:)`.
     *   Built-in `inProgress` (thread-safe via `OSAllocatedUnfairLock`) and `inProgressStream` (single-consumer `AsyncStream<Bool>`).
-    *   `executeCatching(params:block:)` bridges throwing code to `StrataResult`.
+    *   `executeCatching(params:block:)` bridges throwing code to `StrataResult`. Re-throws `CancellationError`.
+    *   Configurable `timeout` (default: 5 minutes). Exceeding timeout returns `.failure(StrataTimeoutException)`.
 *   **`StrataSubjectInteractor<P, T>`**: Open class for observing streams of data.
     *   Subclass and override `createObservable(params:)`.
     *   Trigger via `callAsFunction(_:)`, consume via `.stream` property.
     *   Re-triggering cancels the previous inner stream automatically.
     *   `value` property caches the latest emission (thread-safe, read-only externally).
 *   **`StrataResult<T>`**: Discriminated union (`.success(T)` / `.failure(StrataException)`).
-    *   Chainable: `onSuccess`, `onFailure`, `map`, `fold`, `getOrNull`, `getOrDefault`, `getOrElse`.
+    *   Chainable: `onSuccess`, `onFailure`, `map`, `flatMap`, `recover`, `fold`, `getOrNull`, `getOrDefault`, `getOrElse`.
 *   **`StrataException`**: Protocol (`Error & Sendable` + `message: String`) for domain failures.
+*   **`StrataExecutionException`**: Wraps unexpected (non-`StrataException`) errors. Preserves `underlyingError`.
+*   **`StrataTimeoutException`**: Indicates interactor execution exceeded its `timeout` duration. Carries `duration`.
 *   **Concurrency Primitives (`TrapezioStrataConcurrency`)**:
     *   `strataLaunch(work:reduce:)`: Detached work + `@MainActor` reduce. Checks `Task.isCancelled` after work — skips `reduce` if cancelled. Returns `Task` handle for cancellation.
     *   `strataLaunchWithResult(operation:)`: Detached work wrapped in `StrataResult`. Returns `Task<StrataResult<T>, Never>`.
     *   `strataLaunchInterop(work:reduce:catch:)`: Legacy/migration interop — detached throwing work + `@MainActor` reduce/catch. Checks `Task.isCancelled` after work — routes `CancellationError()` to `catch` if cancelled. No MESA types required. Use `strataLaunch` with interactors for new code.
     *   `strataLaunchMain(work:reduce:)`: Main-thread work + `@MainActor` reduce. Checks `Task.isCancelled` after work — skips `reduce` if cancelled. For use cases requiring `@MainActor`-isolated execution. Returns `Task` handle for cancellation.
-*   `strataCollect(stream, action:)`: Detached stream iteration + `@MainActor` action per value.
+    *   `strataCollect(stream, action:)`: Detached stream iteration + `@MainActor` action per value.
     *   `strataRunCatching { }`: Wraps async throwing block into `StrataResult`.
 
 ### 3. Data Flow
@@ -109,7 +112,7 @@ All features MUST implement these 5 components:
 
 **Wiring**: Use `TrapezioContainer(makeStore:ui:)` to preserve store identity across SwiftUI view updates. Internally calls `store.render(with: ui)` which creates `TrapezioRuntime`.
 
-**Messages**: Use `TrapezioMessageManager` for transient user-facing messages (snackbars, alerts). Observe via `messagesSequence` (`AsyncStream`).
+**Messages**: Use `TrapezioMessageManager` for transient user-facing messages (snackbars, alerts). Observe via `messagesSequence` (`AsyncStream`). Queue is capped at 10 messages — when a new message is pushed and the queue is full, the oldest message is dropped (FIFO) to make room; no error or back-pressure is emitted. `TrapezioMessage` can be created from a `String` or an `Error`.
 
 ### 3. Threading Rules (CRITICAL)
 *   **Presentation**: `@MainActor`. All `TrapezioStore` subclasses, UI state, and `reduce` closures.
@@ -127,7 +130,7 @@ Most concurrency primitives use `Task.detached` to guarantee work runs off the m
 | `strataLaunchInterop(work:reduce:catch:)` | Detached (cooperative pool) | `@MainActor` via `reduce`/`catch` | Routes `CancellationError()` to `catch` | `Task<Void, Never>` |
 | `strataLaunchMain(work:reduce:)` | `@MainActor` | `@MainActor` via `reduce` | Skips `reduce` | `Task<Void, Never>` |
 | `strataCollect(stream, action:)` | Detached (cooperative pool) | `@MainActor` via `action` per emission | — | `Task<Void, Never>` |
-| `strataRunCatching { }` | Inherits caller context | Same | — | `StrataResult<T>` |
+| `strataRunCatching { }` | Inherits caller context | Same | Re-throws `CancellationError` | `StrataResult<T>` (throws) |
 
 All return `@discardableResult` — ignore for fire-and-forget, or store the `Task` handle for cancellation.
 
@@ -137,6 +140,8 @@ All return `@discardableResult` — ignore for fire-and-forget, or store the `Ta
 | `.onSuccess { }` | Executes closure on success, returns self (chainable) |
 | `.onFailure { }` | Executes closure on failure, returns self (chainable) |
 | `.map { }` | Transforms success value, preserves failure |
+| `.flatMap { }` | Chains dependent `StrataResult`-returning operations; short-circuits on failure |
+| `.recover { }` | Attempts async recovery on failure, passes through on success |
 | `.fold(onSuccess:onFailure:)` | Exhaustive match returning a single value |
 | `.getOrNull()` | Returns value or nil |
 | `.getOrDefault(_:)` | Returns value or provided default |
@@ -164,7 +169,8 @@ MESA/                        # Swift Package
   ├── Sources/
   │   ├── Trapezio/          # Core MVI library
   │   ├── TrapezioNavigation/# Navigation library
-  │   └── Strata/            # Clean Arch use case layer
+  │   ├── Strata/            # Clean Arch use case layer
+  │   └── TrapezioTest/      # Test utilities (FakeTrapezioNavigator, TestEventSink, etc.)
   └── Tests/
 Counter/                     # Sample Xcode app
 ```
@@ -211,4 +217,11 @@ graph LR
     *   `dismiss()` — pop the current screen.
     *   `dismissToRoot()` — pop to root.
     *   `dismissTo(_ screen:)` — pop back to a specific screen.
+    *   `popWithResult(key:result:)` — pop and deliver a `TrapezioNavigationResult` to the previous screen.
+    *   `consumeResult(forKey:)` / `consumeResult(forKey:as:)` — single-consumption result retrieval.
+    *   `clearResults()` — removes all unconsumed results. Call during teardown to prevent stale accumulation.
+*   **`TrapezioNavigationResult`**: Marker protocol (`Sendable`) for typed data passed between screens on pop.
+    *   **Storage scope**: Per navigation stack — each `TrapezioNavigationHost` owns its own `TrapezioNavigator` with an independent keyed result dictionary.
+    *   **Lifecycle**: Results persist in the navigator until consumed or explicitly cleared. `consumeResult` is single-consumption (removes the entry on read; a second call returns `nil`). `consumeResult(forKey:as:)` restores the entry on type mismatch so a subsequent call with the correct type still succeeds. `dismissToRoot()` calls `clearResults()` automatically; `dismiss()` and `dismissTo(_:)` do not. Unconsumed results are never cleared by a timeout — callers must consume or clear them.
+    *   **Thread safety**: `TrapezioNavigator` is `@MainActor`-isolated, so `popWithResult` (store + dismiss) and `consumeResult` are serialized on the main thread with no additional locking needed.
 *   **`TrapezioInterop`**: Protocol for feature-to-app-shell communication (`send(_ event:)`). Use `ClosureTrapezioInterop` for closure-based handling.

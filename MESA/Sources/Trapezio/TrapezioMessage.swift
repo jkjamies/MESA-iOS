@@ -25,12 +25,20 @@ public struct TrapezioMessage: Equatable, Identifiable, Sendable {
         self.message = message
         self.id = id
     }
+
+    /// Creates a message from an `Error`, using its `localizedDescription`.
+    public init(_ error: Error, id: UUID = UUID()) {
+        self.init(message: error.localizedDescription, id: id)
+    }
 }
 
-/// Manages a queue of transient messages.
-/// Observe `message` to show the current message.
+/// Manages a queue of transient messages (oldest first).
+/// Observe `message` to show the current message; when the queue exceeds its
+/// capacity the oldest entry is dropped (FIFO) to make room for the new one.
 @MainActor
 public class TrapezioMessageManager: ObservableObject {
+    private static let maxQueueSize = 10
+
     @Published public private(set) var messages: [TrapezioMessage] = []
     
     public var message: TrapezioMessage? {
@@ -64,6 +72,9 @@ public class TrapezioMessageManager: ObservableObject {
     
     public func emit(_ message: TrapezioMessage) {
         messages.append(message)
+        if messages.count > Self.maxQueueSize {
+            messages = Array(messages.suffix(Self.maxQueueSize))
+        }
         notifyListeners()
     }
     

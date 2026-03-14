@@ -98,6 +98,37 @@ struct TrapezioMessageTests {
         #expect(a == b)
         #expect(a != c)
     }
+
+    @Test("init from Error uses localizedDescription")
+    func initFromError() {
+        enum TestError: Error, LocalizedError {
+            case test
+            var errorDescription: String? { "test error" }
+        }
+
+        let msg = TrapezioMessage(TestError.test)
+
+        #expect(msg.message == "test error")
+    }
+
+    @Test("init from Error without custom errorDescription uses system description")
+    func initFromErrorNoCustomDescription() {
+        struct PlainError: Error {}
+
+        let msg = TrapezioMessage(PlainError())
+
+        #expect(!msg.message.isEmpty)
+    }
+
+    @Test("init from Error preserves custom id")
+    func initFromErrorCustomId() {
+        struct TestError: Error {}
+        let id = UUID()
+
+        let msg = TrapezioMessage(TestError(), id: id)
+
+        #expect(msg.id == id)
+    }
 }
 
 // MARK: - TrapezioMessageManager Tests
@@ -186,6 +217,45 @@ struct TrapezioMessageManagerTests {
 
         let cleared = await iter.next()
         #expect(cleared == [])
+    }
+
+    @Test("emitting 11 messages keeps only last 10")
+    @MainActor func queueCapDropsOldest() {
+        let manager = TrapezioMessageManager()
+
+        for i in 0..<11 {
+            manager.emit(TrapezioMessage(message: "msg-\(i)"))
+        }
+
+        #expect(manager.messages.count == 10)
+        #expect(manager.messages.first?.message == "msg-1")
+        #expect(manager.messages.last?.message == "msg-10")
+    }
+
+    @Test("emitting exactly 10 messages preserves all")
+    @MainActor func queueCapExactly10() {
+        let manager = TrapezioMessageManager()
+
+        for i in 0..<10 {
+            manager.emit(TrapezioMessage(message: "msg-\(i)"))
+        }
+
+        #expect(manager.messages.count == 10)
+        #expect(manager.messages.first?.message == "msg-0")
+    }
+
+    @Test("oldest message is dropped when over capacity")
+    @MainActor func queueCapDropsCorrectMessage() {
+        let manager = TrapezioMessageManager()
+        let first = TrapezioMessage(message: "first")
+
+        manager.emit(first)
+        for i in 1..<11 {
+            manager.emit(TrapezioMessage(message: "msg-\(i)"))
+        }
+
+        #expect(manager.messages.count == 10)
+        #expect(!manager.messages.contains(first))
     }
 }
 

@@ -17,6 +17,9 @@
 import Foundation
 import os
 
+/// Default timeout duration for `StrataInteractor.execute` (5 minutes).
+public let strataInteractorDefaultTimeout: TimeInterval = 300
+
 // MARK: - StrataInteractor
 
 /// Base class for one-shot business operations with built-in loading state.
@@ -71,35 +74,98 @@ open class StrataInteractor<P: Sendable, T: Sendable>: @unchecked Sendable {
         fatalError("doWork(params:) must be overridden")
     }
     
+    /// Default timeout for interactor execution (5 minutes).
+    public static var defaultTimeout: TimeInterval { strataInteractorDefaultTimeout }
+
     /// Executes the interactor, automatically managing `inProgress` state.
-    public final func execute(params: P) async -> StrataResult<T> {
+    ///
+    /// - Parameters:
+    ///   - params: The input parameters.
+    ///   - timeout: Maximum execution time. Defaults to ``defaultTimeout`` (5 minutes).
+    /// - Returns: A `StrataResult` containing the result or a timeout/execution failure.
+    public final func execute(
+        params: P,
+        timeout: TimeInterval = strataInteractorDefaultTimeout
+    ) async -> StrataResult<T> {
         setInProgress(true)
         defer { setInProgress(false) }
-        return await doWork(params: params)
+
+        do {
+            return try await withThrowingTaskGroup(of: StrataResult<T>?.self) { group in
+                group.addTask {
+                    await self.doWork(params: params)
+                }
+                group.addTask {
+                    try await Task.sleep(for: .seconds(timeout))
+                    return nil
+                }
+
+                for try await result in group {
+                    group.cancelAll()
+                    if let result = result {
+                        return result
+                    } else {
+                        return .failure(StrataTimeoutException(duration: timeout))
+                    }
+                }
+                // Unreachable with two tasks — the loop always executes and
+                // returns above. Required by the compiler for exhaustive coverage.
+                return .failure(StrataTimeoutException(duration: timeout))
+            }
+        } catch {
+            return .failure(StrataExecutionException(error: error))
+        }
     }
     
     /// Helper to bridge throws to StrataResult in doWork implementations.
+    ///
+    /// All errors — including `CancellationError` — are caught and wrapped in a
+    /// `.failure` result, making this safe to call from the non-throwing `doWork`.
+    /// Cooperative cancellation is still handled at the `execute` level via the task group.
     public func executeCatching(params: P, block: (P) async throws -> T) async -> StrataResult<T> {
-        return await strataRunCatching {
-            try await block(params)
+        do {
+            let result = try await block(params)
+            return .success(result)
+        } catch let error as any StrataException {
+            return .failure(error)
+        } catch {
+            return .failure(StrataExecutionException(error: error))
         }
     }
 }
 
 // MARK: - Helper Functions
 
-/// Wraps an async block in a StrataResult, catching any errors.
+/// Wraps an async block in a `StrataResult`, catching any errors.
+///
+/// `CancellationError` is mapped to `.failure(StrataCancellationException)` so that
+/// cancellation is represented uniformly inside `StrataResult` without throwing.
 public func strataRunCatching<T>(_ block: () async throws -> T) async -> StrataResult<T> {
     do {
         let result = try await block()
         return .success(result)
+    } catch is CancellationError {
+        return .failure(StrataCancellationException())
     } catch let error as any StrataException {
         return .failure(error)
     } catch {
-        return .failure(GenericStrataException(message: error.localizedDescription))
+        return .failure(StrataExecutionException(error: error))
     }
 }
 
-private struct GenericStrataException: StrataException {
-    let message: String
+/// Wraps an unexpected (non-`StrataException`) error caught during interactor execution.
+///
+/// Preserves the original error for inspection while conforming to `StrataException`
+/// for uniform error handling in `StrataResult` chains.
+///
+/// `@unchecked Sendable` because `underlyingError` is `Error` (not `Sendable`).
+/// Safe: both stored properties are immutable (`let`), so no cross-isolation mutation is possible.
+public struct StrataExecutionException: StrataException, @unchecked Sendable {
+    public let message: String
+    public let underlyingError: Error
+
+    public init(error: Error) {
+        self.message = error.localizedDescription
+        self.underlyingError = error
+    }
 }

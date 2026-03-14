@@ -212,6 +212,11 @@ When dependencies need faking, create Fake classes in a `Fakes/` subdirectory:
 - Remove delays for deterministic testing
 - Provide controllable state (e.g., `stubResult` property, `sentEvents` capture array)
 - Mark `@unchecked Sendable` where needed for concurrency tests
+- **Prefer `TrapezioTest` library utilities** when available:
+  - `FakeTrapezioNavigator` — records all navigation events (`goTo`, `dismiss`, `popWithResult`, etc.) for assertion
+  - `TestEventSink<E>` — records events via `callAsFunction`, provides `.events`, `.last`, `.count`
+  - `TrapezioStore.test { state in }` — headless state assertion without UI
+  - `TrapezioStore.awaitState(until:validate:)` — waits for async state changes before asserting
 
 ```swift
 import Foundation
